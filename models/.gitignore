@@ -4,24 +4,10 @@ env/
 .venv/
 ENV/
 
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -32,22 +18,17 @@ wheels/
 *.swp
 *.swo
 *~
-.project
-.pydevproject
-.settings/
 
 # OS
 .DS_Store
 Thumbs.db
 .directory
 
-# Models & Weights
-*.pt
-*.pth
-*.onnx
-weights/
-models/
-*.safetensors
+# Large files (optional - uncomment if needed)
+# *.pt
+# *.pth
+# *.onnx
+# *.safetensors
 
 # Video & Media
 *.mp4

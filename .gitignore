@@ -56,7 +56,6 @@ Thumbs.db
 *.onnx
 *.safetensors
 weights/
-models/
 checkpoints/
 
 # Video & Media
