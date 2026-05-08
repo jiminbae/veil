@@ -47,6 +47,14 @@ MODELS: dict[str, ModelSpec] = {
         video_file=BASE_DIR / "people_crossing.mp4",
         output_video=EVAL_OUTPUT_DIR / "yolov8x" / "yolov8x.mp4",
     ),
+    "minhyung": ModelSpec(
+        name="main",
+        script=BASE_DIR / "minhyung/main.py",            
+        cwd=BASE_DIR / "minhyung",                          
+        log_file=BASE_DIR / "minhyung/main.log",
+        video_file=BASE_DIR / "people_crossing.mp4",
+        output_video=EVAL_OUTPUT_DIR / "main" / "main.mp4",
+    ),
 }
 
 
