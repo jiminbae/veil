@@ -9,7 +9,7 @@ from insightface.app import FaceAnalysis
 
 
 DEFAULT_VIDEO_PATH = "../people_crossing.mp4"
-FACE_MODEL_PATH = "weights/yolov8x-face-lindevs.pt"
+FACE_MODEL_PATH = "runs/face/yolo26x_widerface/weights/best.pt"
 REID_MODEL_PATH = "../boxmot/models/osnet_x0_25_msmt17.pt"
 
 DEFAULT_OUTPUT_PATH = "tracker_arcface.mp4"
@@ -150,7 +150,7 @@ def detect_faces_multiscale(frame, detector, device):
     results = detector(
         frame,
         conf=0.40,
-        imgsz=768,
+        imgsz=1280,
         verbose=False,
         device=device
     )[0]
@@ -179,7 +179,7 @@ def detect_faces_multiscale(frame, detector, device):
         results = detector(
             tile,
             conf=0.40,
-            imgsz=640,
+            imgsz=1280,
             verbose=False,
             device=device
         )[0]
