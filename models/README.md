@@ -12,22 +12,6 @@
 - `people_crossing.mp4`: 로컬 평가용 동영상입니다. git에는 올라가지 않습니다.
 - `evaluation_results/`: 평가 결과 영상과 로그가 저장되는 폴더입니다. git에는 올라가지 않습니다.
 
-## 최종 얼굴 블러 목적 추천
-
-최종 목표가 "동영상 속 얼굴을 탐지해서 블러 처리"라면 아래 조합을 추천합니다.
-
-```bash
-cd /home/jmbae/DL-project/models
-
-/home/jmbae/DL-project/venv/bin/python seojin/yolov8x.py \
-  --video /home/jmbae/DL-project/models/people_crossing.mp4 \
-  --output /home/jmbae/DL-project/models/output_blur_yolo26.mp4 \
-  --log /home/jmbae/DL-project/models/output_blur_yolo26.log \
-  --face-model /home/jmbae/yolo26x-face/runs/detect/runs/face/yolo26x_widerface/weights/best.pt
-```
-
-`tracker_arcface.py`와 `main.py`는 ArcFace 기반 identity 추적이 들어가서 훨씬 느립니다.
-같은 사람을 계속 같은 ID로 유지하는 것이 중요하다면 유용하지만, 단순 얼굴 블러 목적에는 과한 편입니다.
 
 ## YOLOv8l Face와 YOLO26 Face 비교 실행
 
@@ -138,23 +122,6 @@ face blurring, and detector-weight comparison.
 - `people_crossing.mp4`: local evaluation video. This file is not tracked by git.
 - `evaluation_results/`: generated videos and logs. This directory is not tracked by git.
 
-## Recommended Pipeline for Face Blur
-
-If the final goal is to detect faces in a video and blur them, use:
-
-```bash
-cd /home/jmbae/DL-project/models
-
-/home/jmbae/DL-project/venv/bin/python seojin/yolov8x.py \
-  --video /home/jmbae/DL-project/models/people_crossing.mp4 \
-  --output /home/jmbae/DL-project/models/output_blur_yolo26.mp4 \
-  --log /home/jmbae/DL-project/models/output_blur_yolo26.log \
-  --face-model /home/jmbae/yolo26x-face/runs/detect/runs/face/yolo26x_widerface/weights/best.pt
-```
-
-`tracker_arcface.py` and `main.py` are much slower because they include
-ArcFace-based identity tracking. They are useful when stable person identity is
-important, but they are heavier than necessary for simple face blurring.
 
 ## Compare YOLOv8l Face and YOLO26 Face
 
