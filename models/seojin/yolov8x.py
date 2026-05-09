@@ -26,7 +26,7 @@ DEFAULT_OUTPUT_PATH = "yolov8x.mp4"
 DEFAULT_LOG_PATH = "yolov8x.log"
 
 # 모델 경로
-FACE_MODEL_PATH = "../telle/face_tracking/weights/yolov8x-face-lindevs.pt"
+FACE_MODEL_PATH = "../../../yolo26x-face/runs/detect/runs/face/yolo26x_widerface/weights/best.pt"
 
 
 def parse_args():
@@ -35,6 +35,7 @@ def parse_args():
     parser.add_argument("--output", type=str, default=DEFAULT_OUTPUT_PATH, help="출력 동영상 경로")
     parser.add_argument("--log", type=str, default=DEFAULT_LOG_PATH, help="로그 파일 경로")
     parser.add_argument("--device", type=int, default=0, help="CUDA 디바이스 ID (음수면 CPU)")
+    parser.add_argument("--face-model", type=str, default=FACE_MODEL_PATH, help="얼굴 YOLO weight 경로")
     return parser.parse_args()
 
 
@@ -45,6 +46,10 @@ def main():
     output_path = Path(args.output)
     log_path = Path(args.log)
     device = args.device
+    face_model_path = Path(args.face_model)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
 
     logger.info(f"입력 동영상: {video_path}")
     logger.info(f"출력 동영상: {output_path}")
@@ -53,7 +58,7 @@ def main():
 
     # 모델 로드
     logger.info("YOLOv8x 모델 로딩...")
-    model = YOLO(FACE_MODEL_PATH)
+    model = YOLO(str(face_model_path))
 
     # 입력 동영상 열기
     cap = cv2.VideoCapture(str(video_path))
@@ -69,12 +74,10 @@ def main():
     logger.info(f"동영상 정보: {width}x{height}, {fps} FPS, {total_frames} 프레임")
 
     # 출력 동영상 설정
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(str(output_path), fourcc, fps, (width, height))
 
     # 로그 파일 열기
-    log_path.parent.mkdir(parents=True, exist_ok=True)
     log_file = open(log_path, 'w', encoding='utf-8')
 
     # 프레임 처리
@@ -85,59 +88,54 @@ def main():
     all_face_ids = set()
 
     logger.info("동영상 처리 시작...")
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    results_generator = model.track(
+        source=str(video_path),
+        persist=True,
+        tracker='botsort.yaml',
+        conf=0.5,
+        verbose=False,
+        device=device,
+        stream=True  # <--- 병목 해소의 핵심 옵션
+    )
 
+    for r in results_generator:
         frame_num += 1
-        timestamp = round(frame_num / fps, 3)
-
-        # YOLOv8x로 트래킹
-        results = model.track(
-            frame,
-            persist=True,
-            tracker='botsort.yaml',
-            conf=0.5,
-            verbose=False,
-            device=device
-        )
+        # 원본 프레임을 복사해서 작업용으로 사용
+        frame = r.orig_img.copy() 
 
         detection_count = 0
         track_count = 0
 
-        if results and results[0].boxes.id is not None:
-            boxes = results[0].boxes.xyxy.cpu().numpy()
-            ids = results[0].boxes.id.cpu().numpy()
+        # 기존 코드의 결과를 r에서 추출하도록 수정
+        if r.boxes is not None and r.boxes.id is not None:
+            boxes = r.boxes.xyxy.cpu().numpy()
+            ids = r.boxes.id.cpu().numpy()
             detection_count = len(boxes)
             track_count = len(set(ids))
 
             for box_idx, (box, track_id) in enumerate(zip(boxes, ids)):
                 x1, y1, x2, y2 = map(int, box)
                 track_id = int(track_id)
-                face_id = track_id  # 같은 track_id를 face_id로 사용
+                face_id = track_id
 
                 all_track_ids.add(track_id)
                 all_face_ids.add(face_id)
 
+                
                 # 모자이크
                 roi = frame[y1:y2, x1:x2]
                 if roi.size > 0:
                     blurred = cv2.GaussianBlur(roi, (51, 51), 0)
                     frame[y1:y2, x1:x2] = blurred
+                
 
                 # ID 표시
                 cv2.putText(
-                    frame,
-                    f'ID:{track_id}',
-                    (x1, y1 - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    (0, 255, 0),
-                    2
+                    frame, f'ID:{track_id}', (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2
                 )
+                
 
-                # 텍스트 로그 (evaluate.py 호환 형식)
                 log_file.write(f"Frame={frame_num} TrackID={track_id} FaceID={face_id}\n")
 
         # 프레임별 통계 로그
@@ -172,6 +170,8 @@ def main():
     logger.info(f"  - 출력 동영상: {output_path}")
     logger.info(f"  - 로그 파일: {log_path}")
     logger.info(f"{'=' * 60}\n")
+    print(f"Saved result to: {output_path}")
+    print(f"Saved log to: {log_path}")
 
 
 if __name__ == "__main__":

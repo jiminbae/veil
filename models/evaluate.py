@@ -1,7 +1,9 @@
 """
-동영상 기반 얼굴 추적 모델 평가 전용 스크립트
-- 각 모델은 각자 스크립트에 그대로 둔다
-- evaluate.py는 각 스크립트를 실행하고 로그/출력만 집계
+Video tracking evaluation runner.
+
+This script does not compute true accuracy metrics because there is no ground
+truth annotation. It runs each model on the same video and reports comparable
+runtime/log health statistics only.
 """
 
 from __future__ import annotations
@@ -15,69 +17,163 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+import cv2
+
 
 BASE_DIR = Path(__file__).resolve().parent
 EVAL_OUTPUT_DIR = BASE_DIR / "evaluation_results"
+DEFAULT_VIDEO = BASE_DIR / "people_crossing.mp4"
+DEFAULT_YOLO26_FACE = Path("/home/jmbae/yolo26x-face/runs/detect/runs/face/yolo26x_widerface/weights/best.pt")
+DEFAULT_YOLOV8_FACE_CANDIDATES = [
+    BASE_DIR / "telle/face_tracking/weights/yolov8x-face-lindevs.pt",
+    BASE_DIR / "weights/yolov8x-face-lindevs.pt",
+    BASE_DIR / "yolov8x-face-lindevs.pt",
+]
 
 
 @dataclass(frozen=True)
 class ModelSpec:
+    key: str
     name: str
     script: Path
     cwd: Path
     log_file: Path
-    video_file: Path
-    output_video: Path | None = None
+    output_video: Path
+
+
+@dataclass(frozen=True)
+class FaceModelSpec:
+    key: str
+    path: Path
+
+
+@dataclass(frozen=True)
+class VideoInfo:
+    path: Path
+    opened: bool
+    frame_count: int
+    fps: float
+    width: int
+    height: int
+
+
+@dataclass(frozen=True)
+class LogStats:
+    log_path: Path
+    frames_seen: int
+    max_frame_index: int
+    total_detections: int
+    total_tracks: int
+    unique_track_ids: int
+    unique_face_ids: int
+    face_assignments: int
+    none_face_assignments: int
+    track_lines: int
+    saved_result: str | None
+    saved_log: str | None
+
+    @property
+    def face_assignment_rate(self) -> float:
+        return self.face_assignments / self.track_lines if self.track_lines else 0.0
+
+
+@dataclass(frozen=True)
+class RunResult:
+    spec: ModelSpec
+    face_model: FaceModelSpec
+    runtime_sec: float
+    returncode: int
+    stats: LogStats | None
+    stderr: str
 
 
 MODELS: dict[str, ModelSpec] = {
     "telle": ModelSpec(
+        key="telle",
         name="tracker_arcface",
         script=BASE_DIR / "telle/face_tracking/tracker_arcface.py",
         cwd=BASE_DIR / "telle/face_tracking",
         log_file=BASE_DIR / "telle/face_tracking/tracking_xface_log.txt",
-        video_file=BASE_DIR / "people_crossing.mp4",
         output_video=EVAL_OUTPUT_DIR / "tracker_arcface" / "tracker_arcface.mp4",
     ),
     "seojin": ModelSpec(
-        name="yolov8x",
+        key="seojin",
+        name="yolo_track",
         script=BASE_DIR / "seojin/yolov8x.py",
         cwd=BASE_DIR / "seojin",
         log_file=BASE_DIR / "seojin/yolov8x.log",
-        video_file=BASE_DIR / "people_crossing.mp4",
-        output_video=EVAL_OUTPUT_DIR / "yolov8x" / "yolov8x.mp4",
+        output_video=EVAL_OUTPUT_DIR / "yolo_track" / "yolo_track.mp4",
     ),
     "minhyung": ModelSpec(
-        name="main",
-        script=BASE_DIR / "minhyung/main.py",            
-        cwd=BASE_DIR / "minhyung",                          
+        key="minhyung",
+        name="person_face_arcface",
+        script=BASE_DIR / "minhyung/main.py",
+        cwd=BASE_DIR / "minhyung",
         log_file=BASE_DIR / "minhyung/main.log",
-        video_file=BASE_DIR / "people_crossing.mp4",
-        output_video=EVAL_OUTPUT_DIR / "main" / "main.mp4",
+        output_video=EVAL_OUTPUT_DIR / "person_face_arcface" / "person_face_arcface.mp4",
     ),
 }
 
 
 FRAME_DET_RE = re.compile(r"Frame=(\d+)\s+Detections=(\d+)")
 FRAME_TRK_RE = re.compile(r"Frame=(\d+)\s+Tracks=(\d+)")
-TRACK_LINE_RE = re.compile(r"Frame=(\d+)\s+TrackID=(\d+)\s+FaceID=(\d+)")
+TRACK_LINE_RE = re.compile(r"Frame=(\d+)\s+TrackID=(\d+)\s+FaceID=(None|\d+)")
 SAVED_RESULT_RE = re.compile(r"Saved result to:\s*(.+)$")
 SAVED_LOG_RE = re.compile(r"Saved log to:\s*(.+)$")
 
 
-def run_model_script(spec: ModelSpec) -> dict[str, object] | None:
+def read_video_info(video_path: Path) -> VideoInfo:
+    cap = cv2.VideoCapture(str(video_path))
+    opened = cap.isOpened()
+    if not opened:
+        return VideoInfo(video_path, False, 0, 0.0, 0, 0)
+
+    info = VideoInfo(
+        path=video_path,
+        opened=True,
+        frame_count=int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
+        fps=float(cap.get(cv2.CAP_PROP_FPS)),
+        width=int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+        height=int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+    )
+    cap.release()
+    return info
+
+
+def variant_log_path(spec: ModelSpec, face_model: FaceModelSpec) -> Path:
+    return EVAL_OUTPUT_DIR / spec.key / face_model.key / f"{spec.key}.log"
+
+
+def variant_output_path(spec: ModelSpec, face_model: FaceModelSpec) -> Path:
+    return EVAL_OUTPUT_DIR / spec.key / face_model.key / f"{spec.key}.mp4"
+
+
+def reset_outputs(log_path: Path, output_path: Path) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if log_path.exists():
+        log_path.unlink()
+    if output_path.exists():
+        output_path.unlink()
+
+
+def run_model_script(spec: ModelSpec, face_model: FaceModelSpec, video_path: Path) -> RunResult | None:
     if not spec.script.exists():
-        print(f"  스크립트를 찾을 수 없습니다: {spec.script}")
+        print(f"  script not found: {spec.script}")
         return None
 
-    print(f"\n{'=' * 80}")
-    print(f"  평가 실행: {spec.name}")
-    print(f"  스크립트: {spec.script}")
-    print(f"  작업 디렉터리: {spec.cwd}")
-    print(f"{'=' * 80}")
+    log_path = variant_log_path(spec, face_model)
+    output_path = variant_output_path(spec, face_model)
+    reset_outputs(log_path, output_path)
 
-    output_video = spec.output_video or (EVAL_OUTPUT_DIR / spec.name / f"{spec.name}.mp4")
-    output_video.parent.mkdir(parents=True, exist_ok=True)
+    print("\n" + "=" * 80)
+    print(f"  Running: {spec.name}")
+    print(f"  Face   : {face_model.key} ({face_model.path})")
+    print(f"  Script : {spec.script}")
+    print(f"  Video  : {video_path}")
+    print(f"  Log    : {log_path}")
+    print("=" * 80)
 
     start_time = time.time()
     result = subprocess.run(
@@ -85,11 +181,13 @@ def run_model_script(spec: ModelSpec) -> dict[str, object] | None:
             sys.executable,
             spec.script.name,
             "--video",
-            str(spec.video_file),
+            str(video_path),
             "--output",
-            str(output_video),
+            str(output_path),
             "--log",
-            str(spec.log_file),
+            str(log_path),
+            "--face-model",
+            str(face_model.path),
         ],
         cwd=str(spec.cwd),
         capture_output=True,
@@ -99,38 +197,29 @@ def run_model_script(spec: ModelSpec) -> dict[str, object] | None:
 
     if result.stdout:
         print(result.stdout)
-    if result.returncode != 0:
+    if result.stderr:
         print(result.stderr)
-        print(f"  실행 실패: return code={result.returncode}")
-        return {
-            "name": spec.name,
-            "runtime_sec": elapsed,
-            "returncode": result.returncode,
-            "log_stats": None,
-        }
 
-    log_path = spec.log_file
-    if not log_path.exists():
-        print(f"  로그 파일 없음: {log_path}")
-        log_stats = None
-    else:
-        log_stats = parse_tracking_log(log_path)
-
-    summary = {
-        "name": spec.name,
-        "runtime_sec": elapsed,
-        "returncode": result.returncode,
-        "log_stats": log_stats,
-    }
-    return summary
+    stats = parse_tracking_log(log_path) if log_path.exists() else None
+    return RunResult(
+        spec=spec,
+        face_model=face_model,
+        runtime_sec=elapsed,
+        returncode=result.returncode,
+        stats=stats,
+        stderr=result.stderr,
+    )
 
 
-def parse_tracking_log(log_path: Path) -> dict[str, object]:
+def parse_tracking_log(log_path: Path) -> LogStats:
     frame_detections: dict[int, int] = {}
     frame_tracks: dict[int, int] = {}
     unique_track_ids: set[int] = set()
     unique_face_ids: set[int] = set()
 
+    face_assignments = 0
+    none_face_assignments = 0
+    track_lines = 0
     saved_result: str | None = None
     saved_log: str | None = None
 
@@ -139,22 +228,24 @@ def parse_tracking_log(log_path: Path) -> dict[str, object]:
 
         match = FRAME_DET_RE.search(line)
         if match:
-            frame = int(match.group(1))
-            detections = int(match.group(2))
-            frame_detections[frame] = detections
+            frame_detections[int(match.group(1))] = int(match.group(2))
             continue
 
         match = FRAME_TRK_RE.search(line)
         if match:
-            frame = int(match.group(1))
-            tracks = int(match.group(2))
-            frame_tracks[frame] = tracks
+            frame_tracks[int(match.group(1))] = int(match.group(2))
             continue
 
         match = TRACK_LINE_RE.search(line)
         if match:
+            track_lines += 1
             unique_track_ids.add(int(match.group(2)))
-            unique_face_ids.add(int(match.group(3)))
+            face_id = match.group(3)
+            if face_id == "None":
+                none_face_assignments += 1
+            else:
+                face_assignments += 1
+                unique_face_ids.add(int(face_id))
             continue
 
         match = SAVED_RESULT_RE.search(line)
@@ -167,156 +258,166 @@ def parse_tracking_log(log_path: Path) -> dict[str, object]:
             saved_log = match.group(1).strip()
             continue
 
-    frame_count = max(frame_detections.keys() | frame_tracks.keys(), default=0)
-    total_detections = sum(frame_detections.values())
-    total_tracks = sum(frame_tracks.values())
+    seen_frames = set(frame_detections) | set(frame_tracks)
 
-    return {
-        "log_path": str(log_path),
-        "frames": frame_count,
-        "total_detections": total_detections,
-        "total_tracks": total_tracks,
-        "avg_detections_per_frame": total_detections / frame_count if frame_count else 0.0,
-        "avg_tracks_per_frame": total_tracks / frame_count if frame_count else 0.0,
-        "unique_track_ids": len(unique_track_ids),
-        "unique_face_ids": len(unique_face_ids),
-        "saved_result": saved_result,
-        "saved_log": saved_log,
-    }
-
-
-def compare_models(model_names: Iterable[str] | None = None) -> list[dict[str, object]]:
-    if model_names is None:
-        model_names = MODELS.keys()
-
-    results: list[dict[str, object]] = []
-
-    for model_name in model_names:
-        spec = MODELS.get(model_name)
-        if spec is None:
-            print(f"  등록되지 않은 모델: {model_name}")
-            continue
-
-        result = run_model_script(spec)
-        if result is not None:
-            results.append(result)
-
-    print("\n" + "=" * 80)
-    print("  평가 결과 비교")
-    print("=" * 80)
-
-    if not results:
-        print("  비교할 결과가 없음")
-        return results
-
-    header = (
-        f"  {'모델명':<24} {'실행 시간(s)':>12} {'프레임 수':>8} {'총 감지 수':>10} "
-        f"{'총 트랙 수':>10} {'고유 트랙 ID':>10} {'고유 Face ID':>10}"
-    )
-    print(header)
-    print("  " + "-" * (len(header) - 2))
-
-    best_runtime = min(results, key=lambda item: item["runtime_sec"])
-    best_unique_faces = max(
-        (item for item in results if item.get("log_stats")),
-        key=lambda item: item["log_stats"]["unique_face_ids"],
-        default=None,
+    return LogStats(
+        log_path=log_path,
+        frames_seen=len(seen_frames),
+        max_frame_index=max(seen_frames, default=0),
+        total_detections=sum(frame_detections.values()),
+        total_tracks=sum(frame_tracks.values()),
+        unique_track_ids=len(unique_track_ids),
+        unique_face_ids=len(unique_face_ids),
+        face_assignments=face_assignments,
+        none_face_assignments=none_face_assignments,
+        track_lines=track_lines,
+        saved_result=saved_result,
+        saved_log=saved_log,
     )
 
-    for item in results:
-        stats = item.get("log_stats")
-        if not stats:
-            print(f"  {item['name']:<24} {item['runtime_sec']:>12.2f} {'-':>8} {'-':>10} {'-':>10} {'-':>10} {'-':>10}")
-            continue
 
-        print(
-            f"  {item['name']:<24} {item['runtime_sec']:>12.2f} {stats['frames']:>8} "
-            f"{stats['total_detections']:>10} {stats['total_tracks']:>10} "
-            f"{stats['unique_track_ids']:>10} {stats['unique_face_ids']:>10}"
-        )
-
-    print("\n  🏆 최단 실행 시간:")
-    print(f"     - {best_runtime['name']} ({best_runtime['runtime_sec']:.2f}s)")
-
-    if best_unique_faces is not None:
-        print("  🏆 가장 많은 고유 Face ID:")
-        print(
-            f"     - {best_unique_faces['name']} "
-            f"({best_unique_faces['log_stats']['unique_face_ids']}개)"
-        )
-
-    print("\n  지표 정의:")
-    print("     - 실행 시간(s): 스크립트 전체 실행 시간")
-    print("     - 프레임 수: 로그에 기록된 처리 프레임 수")
-    print("     - 총 감지 수: 모든 프레임의 detection 합")
-    print("     - 총 트랙 수: 모든 프레임의 track 합")
-    print("     - 고유 트랙 ID: 서로 다른 track id 개수")
-    print("     - 고유 Face ID: 서로 다른 stable face id 개수")
-
-    print(f"\n  결과 디렉터리: {EVAL_OUTPUT_DIR}")
-    return results
-
-
-def print_single_result(result: dict[str, object]) -> None:
-    stats = result.get("log_stats")
-
-    print("\n" + "=" * 80)
-    print("  📈 평가 결과")
-    print("=" * 80)
-
-    header = (
-        f"  {'모델명':<24} {'실행 시간(s)':>12} {'프레임 수':>8} {'총 감지 수':>10} "
-        f"{'총 트랙 수':>10} {'고유 트랙 ID':>10} {'고유 Face ID':>10}"
-    )
-    print(header)
-    print("  " + "-" * (len(header) - 2))
-
-    if not stats:
-        print(f"  {result['name']:<24} {result['runtime_sec']:>12.2f} {'-':>8} {'-':>10} {'-':>10} {'-':>10} {'-':>10}")
-        print(f"\n  결과 디렉터리: {EVAL_OUTPUT_DIR}")
-        return
+def print_report(results: list[RunResult], video_info: VideoInfo) -> None:
+    print("\n" + "=" * 100)
+    print("  Evaluation Report")
+    print("=" * 100)
 
     print(
-        f"  {result['name']:<24} {result['runtime_sec']:>12.2f} {stats['frames']:>8} "
-        f"{stats['total_detections']:>10} {stats['total_tracks']:>10} "
-        f"{stats['unique_track_ids']:>10} {stats['unique_face_ids']:>10}"
+        f"  Video: {video_info.path} | {video_info.width}x{video_info.height} | "
+        f"{video_info.fps:.2f} fps | metadata frames={video_info.frame_count}"
     )
 
-    print("\n  지표 정의:")
-    print("     - 실행 시간(s): 스크립트 전체 실행 시간")
-    print("     - 프레임 수: 로그에 기록된 처리 프레임 수")
-    print("     - 총 감지 수: 모든 프레임의 detection 합")
-    print("     - 총 트랙 수: 모든 프레임의 track 합")
-    print("     - 고유 트랙 ID: 서로 다른 track id 개수")
-    print("     - 고유FaceID: 서로 다른 stable face id 개수")
-    print(f"\n  💾 결과 디렉터리: {EVAL_OUTPUT_DIR}")
+    print()
+    header = (
+        f"  {'model':<22} {'face':<12} {'status':<7} {'sec':>8} {'frames':>9} {'miss':>6} "
+        f"{'det':>8} {'trk':>8} {'trk_id':>7} {'face_id':>7} {'face%':>7}"
+    )
+    print(header)
+    print("  " + "-" * (len(header) - 2))
+
+    for result in results:
+        stats = result.stats
+        status = "ok" if result.returncode == 0 else f"err{result.returncode}"
+        if stats is None:
+            print(
+                f"  {result.spec.name:<22} {result.face_model.key:<12} {status:<7} {result.runtime_sec:>8.2f} "
+                f"{'-':>9} {'-':>6} {'-':>8} {'-':>8} {'-':>7} {'-':>7} {'-':>7}"
+            )
+            continue
+
+        missing = max(video_info.frame_count - stats.frames_seen, 0)
+        print(
+            f"  {result.spec.name:<22} {result.face_model.key:<12} {status:<7} {result.runtime_sec:>8.2f} "
+            f"{stats.frames_seen:>9} {missing:>6} {stats.total_detections:>8} "
+            f"{stats.total_tracks:>8} {stats.unique_track_ids:>7} "
+            f"{stats.unique_face_ids:>7} {stats.face_assignment_rate * 100:>6.1f}%"
+        )
+
+    print("\n  Notes")
+    print("  - This report is valid for run/log consistency, not model accuracy.")
+    print("  - Face variants are comparable only within the same model row family.")
+    print("  - Accuracy needs ground-truth boxes/IDs for precision, recall, IDF1, MOTA, or ID switches.")
+    print("  - A larger face_id count is not automatically better; it can mean identity fragmentation.")
+    print("  - 'miss' is metadata frame count minus frames found in the model log.")
+    print(f"\n  Output directory: {EVAL_OUTPUT_DIR}")
+
+
+def resolve_model_names(names: Iterable[str] | None) -> list[str]:
+    if names is None:
+        return list(MODELS.keys())
+    resolved = []
+    for name in names:
+        if name not in MODELS:
+            print(f"  Unknown model: {name}")
+            print(f"  Available: {', '.join(MODELS)}")
+            continue
+        resolved.append(name)
+    return resolved
+
+
+def default_face_models() -> list[FaceModelSpec]:
+    face_models: list[FaceModelSpec] = []
+
+    for path in DEFAULT_YOLOV8_FACE_CANDIDATES:
+        if path.exists():
+            face_models.append(FaceModelSpec("yolov8_face", path.resolve()))
+            break
+
+    if DEFAULT_YOLO26_FACE.exists():
+        face_models.append(FaceModelSpec("yolo26_face", DEFAULT_YOLO26_FACE.resolve()))
+
+    return face_models
+
+
+def parse_face_model_items(items: Iterable[str] | None) -> list[FaceModelSpec]:
+    if items is None:
+        return default_face_models()
+
+    face_models = []
+    for item in items:
+        if "=" not in item:
+            raise ValueError(f"face model must be name=path, got: {item}")
+        key, raw_path = item.split("=", 1)
+        key = key.strip()
+        path = Path(raw_path).expanduser().resolve()
+        if not key:
+            raise ValueError(f"empty face model name in: {item}")
+        if not path.exists():
+            raise FileNotFoundError(f"face model not found for {key}: {path}")
+        face_models.append(FaceModelSpec(key=key, path=path))
+
+    return face_models
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="동영상 기반 얼굴 추적 모델 평가 전용 스크립트")
+    parser = argparse.ArgumentParser(description="Run tracking scripts and summarize log health.")
     parser.add_argument("--mode", choices=["single", "compare"], default="compare")
-    parser.add_argument("--model", type=str, help="single 모드에서 평가할 모델명")
-    parser.add_argument("--models", nargs="+", help="compare 모드에서 평가할 모델명 목록")
+    parser.add_argument("--model", type=str, help="single mode model key")
+    parser.add_argument("--models", nargs="+", help="compare mode model keys")
+    parser.add_argument("--video", type=Path, default=DEFAULT_VIDEO, help="input video used for every model")
+    parser.add_argument(
+        "--face-models",
+        nargs="+",
+        help="face detector variants as name=path. Example: yolov8=/path/yolov8-face.pt yolo26=/path/best.pt",
+    )
     args = parser.parse_args()
+
+    video_path = args.video.resolve()
+    video_info = read_video_info(video_path)
+    if not video_info.opened:
+        print(f"Cannot open video: {video_path}")
+        return 1
 
     EVAL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     if args.mode == "single":
         if not args.model:
-            print("--model 옵션 필요.")
+            print("--model is required in single mode.")
             return 1
-        if args.model not in MODELS:
-            print(f" 등록되지 않은 모델: {args.model}")
-            print(f"   사용 가능: {', '.join(MODELS.keys())}")
-            return 1
+        model_names = resolve_model_names([args.model])
+    else:
+        model_names = resolve_model_names(args.models)
 
-        result = run_model_script(MODELS[args.model])
-        if result is not None:
-            print_single_result(result)
-        return 0 if result is not None and result.get("returncode") == 0 else 1
+    try:
+        face_models = parse_face_model_items(args.face_models)
+    except (FileNotFoundError, ValueError) as exc:
+        print(exc)
+        return 1
 
-    compare_models(args.models)
-    return 0
+    if not face_models:
+        print("No face model weights found.")
+        print("Pass them explicitly, for example:")
+        print("  --face-models yolov8=/path/to/yolov8-face.pt yolo26=/home/jmbae/yolo26x-face/runs/detect/runs/face/yolo26x_widerface/weights/best.pt")
+        return 1
+
+    results: list[RunResult] = []
+    for model_name in model_names:
+        for face_model in face_models:
+            result = run_model_script(MODELS[model_name], face_model, video_path)
+            if result is not None:
+                results.append(result)
+
+    print_report(results, video_info)
+    return 0 if all(result.returncode == 0 for result in results) else 1
 
 
 if __name__ == "__main__":

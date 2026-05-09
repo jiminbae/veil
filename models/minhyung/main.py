@@ -12,7 +12,7 @@ from ultralytics import YOLO
 if torch.cuda.is_available():
     DEVICE = 0
     CTX_ID = 0
-    FACE_PROVIDERS = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    FACE_PROVIDERS = ["CPUExecutionProvider"]
     HALF_PRECISION = True
     print("[INFO] CUDA 사용")
 else:
@@ -21,6 +21,43 @@ else:
     FACE_PROVIDERS = ["CPUExecutionProvider"]
     HALF_PRECISION = False
     print("[INFO] CPU 사용")
+
+def calc_iou_1to1(boxA, boxB):
+    # box: [x1, y1, x2, y2]
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+    
+    interArea = max(0, xB - xA) * max(0, yB - yA)
+    if interArea == 0:
+        return 0.0
+        
+    boxAArea = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
+    boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
+    
+    return interArea / float(boxAArea + boxBArea - interArea)
+
+
+def face_inside_person_score(face_box, person_box):
+    fx1, fy1, fx2, fy2 = face_box
+    px1, py1, px2, py2 = person_box
+
+    face_area = max(0, fx2 - fx1) * max(0, fy2 - fy1)
+    if face_area == 0:
+        return 0.0
+
+    ix1 = max(fx1, px1)
+    iy1 = max(fy1, py1)
+    ix2 = min(fx2, px2)
+    iy2 = min(fy2, py2)
+    inter_area = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+
+    cx = (fx1 + fx2) / 2
+    cy = (fy1 + fy2) / 2
+    center_inside = px1 <= cx <= px2 and py1 <= cy <= py2
+    score = inter_area / face_area
+    return score if center_inside else score * 0.5
 
 # ReID 모델 경로
 REID_MODEL_PATH = "models/weights/osnet_x0_25_msmt17.pt"
@@ -37,12 +74,21 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--video", type=str, required=True, help="입력 비디오 경로")
 parser.add_argument("--output", type=str, required=True, help="출력 비디오 경로")
 parser.add_argument("--log", type=str, required=True, help="로그 파일 저장 경로")
+parser.add_argument(
+    "--face-model",
+    type=str,
+    default="../../../yolo26x-face/runs/detect/runs/face/yolo26x_widerface/weights/best.pt",
+    help="얼굴 YOLO weight 경로",
+)
 args = parser.parse_args()
 
 input_path = args.video
 output_path = args.output
 log_path = args.log
+face_model_path = args.face_model
 
+Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+Path(log_path).parent.mkdir(parents=True, exist_ok=True)
 log_file = open(log_path, "w", encoding="utf-8")
 
 
@@ -53,11 +99,11 @@ def log_print(msg: str) -> None:
 
 # ArcFace 초기화
 face_app = FaceAnalysis(name="buffalo_l", providers=FACE_PROVIDERS)
-face_app.prepare(ctx_id=CTX_ID, det_size=(640, 640))
+face_app.prepare(ctx_id=CTX_ID, det_size=(320, 320))
 
 # YOLO 모델
 person_model = YOLO("models/yolov8x.pt")
-face_model = YOLO("/home/jmbae/DL-project/model/telle/face_tracking/weights/yolov8x-face-lindevs.pt")
+face_model = YOLO(face_model_path)
 
 # BoTSORT + ReID Tracker
 tracker = BotSort(
@@ -80,7 +126,7 @@ if not cap.isOpened():
 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 fps = cap.get(cv2.CAP_PROP_FPS)
-imgsz = 960 if DEVICE == "cuda" else 640
+imgsz = 1280 if DEVICE == "cuda" else 640
 
 if fps <= 0:
     fps = 25
@@ -277,12 +323,14 @@ while True:
             x1, y1, x2, y2 = box
             detections.append([x1, y1, x2, y2, conf, cls])
 
+    log_print(f"Frame={frame_count} Detections={len(detections)}")
+
     if len(detections) == 0:
+        log_print(f"Frame={frame_count} Tracks=0")
         out.write(frame)
         continue
 
     detections = np.array(detections, dtype=np.float32)
-    log_print(f"Frame={frame_count} Detections={len(detections)}")
 
     tracks = tracker.update(detections, frame)
 
@@ -300,7 +348,7 @@ while True:
 
     face_results = face_model(frame, conf=0.4, device=DEVICE, verbose=False)
 
-    face_list = []
+    yolo_face_list = []
     for r in face_results:
         if r.boxes is None:
             continue
@@ -308,37 +356,43 @@ while True:
         face_boxes = r.boxes.xyxy.cpu().numpy()
         for box in face_boxes:
             fx1, fy1, fx2, fy2 = map(int, box)
-            face_list.append((fx1, fy1, fx2, fy2))
+            yolo_face_list.append((fx1, fy1, fx2, fy2))
 
-    print(f"[INFO] 얼굴 개수 {len(face_list)}")
+    print(f"[INFO] 얼굴 개수 {len(yolo_face_list)}")
 
     matched = []
     iou_threshold = 0.01
 
-    for face_box in face_list:
-        best_iou = 0.0
-        matched_track_id = None
+    all_faces_info = face_app.get(frame)
 
-        for person in person_list:
-            iou = compute_iou(face_box, person["bbox"])
-            if iou > best_iou:
-                best_iou = iou
-                matched_track_id = person["track_id"]
+    # 사람 박스와 얼굴 박스의 IoU는 작게 나오는 것이 정상입니다.
+    # 얼굴 박스가 사람 박스 안에 얼마나 들어가는지를 기준으로 매칭합니다.
+    for track in tracks:
+        tx1, ty1, tx2, ty2, track_id = map(int, track[:5])
+        person_box = [tx1, ty1, tx2, ty2]
 
-        if best_iou < iou_threshold:
-            matched_track_id = None
+        best_score = 0.0
+        best_face_info = None
+        best_face_box = person_box
 
-        embedding = get_face_embedding(frame, face_box)
-        stable_id = assign_stable_id(matched_track_id, embedding, frame_count)
+        for face in all_faces_info:
+            score = face_inside_person_score(face.bbox, person_box)
+            if score > best_score:
+                best_score = score
+                best_face_info = face
+                best_face_box = list(map(int, face.bbox))
 
-        matched.append(
-            {
-                "face_box": face_box,
-                "track_id": matched_track_id,
-                "stable_id": stable_id,
-                "iou": best_iou,
-            }
-        )
+        stable_id = None
+        if best_score >= 0.5 and best_face_info is not None:
+            emb = getattr(best_face_info, "normed_embedding", best_face_info.embedding)
+            stable_id = assign_stable_id(track_id, l2_normalize(emb), frame_count)
+
+        matched.append({
+            "face_box": best_face_box,
+            "track_id": track_id,
+            "stable_id": stable_id,
+            "iou": best_score,
+        })
 
     for m in matched:
         fx1, fy1, fx2, fy2 = m["face_box"]
@@ -346,14 +400,8 @@ while True:
         stable_id = m["stable_id"]
         iou = m["iou"]
 
-        if track_id is not None and stable_id is not None:
-            log_print(f"Frame={frame_count} TrackID={track_id} FaceID={stable_id}")
-
+        log_print(f"Frame={frame_count} TrackID={track_id} FaceID={stable_id}")
         print(f"[INFO] Track={track_id} | Stable={stable_id} | IoU={iou:.4f}")
-
-    for m in matched:
-        fx1, fy1, fx2, fy2 = m["face_box"]
-        stable_id = m["stable_id"]
 
         if stable_id is not None and stable_id not in EXCLUDE_STABLE_IDS:
             face_roi = frame[fy1:fy2, fx1:fx2]

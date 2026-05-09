@@ -9,7 +9,7 @@ from insightface.app import FaceAnalysis
 
 
 DEFAULT_VIDEO_PATH = "../people_crossing.mp4"
-FACE_MODEL_PATH = "runs/face/yolo26x_widerface/weights/best.pt"
+FACE_MODEL_PATH = "../../../../yolo26x-face/runs/detect/runs/face/yolo26x_widerface/weights/best.pt"
 REID_MODEL_PATH = "../boxmot/models/osnet_x0_25_msmt17.pt"
 
 DEFAULT_OUTPUT_PATH = "tracker_arcface.mp4"
@@ -19,8 +19,6 @@ DEFAULT_LOG_PATH = "tracker_arcface.log"
 
 # GPU 사용시 설정
 device = "cuda"
-
-detector = YOLO(FACE_MODEL_PATH)
 
 tracker = BotSort(
     reid_weights=Path(REID_MODEL_PATH),
@@ -35,11 +33,9 @@ tracker = BotSort(
 
 face_app = FaceAnalysis(
     name="buffalo_l",
-    # providers=["CPUExecutionProvider"]
-    # GPU 사용시 설정
-    providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+    providers=["CPUExecutionProvider"]
 )
-face_app.prepare(ctx_id=0, det_size=(640, 640))
+face_app.prepare(ctx_id=0, det_size=(320, 320))
 
 SIM_THRESHOLD = 0.38
 SMOOTH_ALPHA = 0.8
@@ -55,9 +51,22 @@ track_last_emb = {}
 bbox_smoother = {}
 current_frame_idx = 0
 
+def calc_iou_1to1(boxA, boxB):
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+    interArea = max(0, xB - xA) * max(0, yB - yA)
+    if interArea == 0: return 0.0
+    boxAArea = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
+    boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
+    return interArea / float(boxAArea + boxBArea - interArea)
+
 def build_logger(log_path):
+    Path(log_path).parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         filename=log_path,
+        filemode="w",
         level=logging.INFO,
         format="%(asctime)s | %(message)s",
         force=True,
@@ -69,6 +78,7 @@ def parse_args():
     parser.add_argument("--video", type=str, default=DEFAULT_VIDEO_PATH, help="입력 동영상 경로")
     parser.add_argument("--output", type=str, default=DEFAULT_OUTPUT_PATH, help="출력 동영상 경로")
     parser.add_argument("--log", type=str, default=DEFAULT_LOG_PATH, help="로그 파일 경로")
+    parser.add_argument("--face-model", type=str, default=FACE_MODEL_PATH, help="얼굴 YOLO weight 경로")
     return parser.parse_args()
 
 
@@ -144,9 +154,7 @@ def filter_detections(dets):
 
 
 def detect_faces_multiscale(frame, detector, device):
-    h, w = frame.shape[:2]
-    all_dets = []
-
+    # 타일링(4등분) 로직을 전부 삭제하고 아래 내용만 남깁니다.
     results = detector(
         frame,
         conf=0.40,
@@ -155,57 +163,20 @@ def detect_faces_multiscale(frame, detector, device):
         device=device
     )[0]
 
+    all_dets = []
     if results.boxes is not None:
         boxes = results.boxes.xyxy.cpu().numpy()
         confs = results.boxes.conf.cpu().numpy()
-
         for box, conf in zip(boxes, confs):
             x1, y1, x2, y2 = box
             all_dets.append([x1, y1, x2, y2, conf, 0])
-
-    tiles = [
-        (0, 0, w // 2, h // 2),
-        (w // 2, 0, w, h // 2),
-        (0, h // 2, w // 2, h),
-        (w // 2, h // 2, w, h),
-    ]
-
-    for tx1, ty1, tx2, ty2 in tiles:
-        tile = frame[ty1:ty2, tx1:tx2]
-
-        if tile.size == 0:
-            continue
-
-        results = detector(
-            tile,
-            conf=0.40,
-            imgsz=1280,
-            verbose=False,
-            device=device
-        )[0]
-
-        if results.boxes is not None:
-            boxes = results.boxes.xyxy.cpu().numpy()
-            confs = results.boxes.conf.cpu().numpy()
-
-            for box, conf in zip(boxes, confs):
-                x1, y1, x2, y2 = box
-                all_dets.append([
-                    x1 + tx1,
-                    y1 + ty1,
-                    x2 + tx1,
-                    y2 + ty1,
-                    conf,
-                    0
-                ])
 
     if len(all_dets) == 0:
         return np.empty((0, 6), dtype=np.float32)
 
     dets = np.array(all_dets, dtype=np.float32)
-    dets = apply_nms(dets, iou_thresh=0.40)
+    # 필터링 로직만 유지
     dets = filter_detections(dets)
-
     return dets
 
 
@@ -351,8 +322,11 @@ args = parse_args()
 VIDEO_PATH = args.video
 OUTPUT_PATH = args.output
 LOG_PATH = args.log
+FACE_MODEL_PATH = args.face_model
 
+Path(OUTPUT_PATH).parent.mkdir(parents=True, exist_ok=True)
 build_logger(LOG_PATH)
+detector = YOLO(FACE_MODEL_PATH)
 
 logging.info("===== Experiment Started =====")
 logging.info(f"VIDEO_PATH={VIDEO_PATH}")
@@ -402,14 +376,32 @@ while True:
         f"Tracks={len(tracks)}"
     )
 
+    all_arcfaces = face_app.get(frame) 
+    
     for track in tracks:
         x1, y1, x2, y2, raw_track_id = map(int, track[:5])
-
-        emb = get_arcface_embedding(frame, [x1, y1, x2, y2])
+        track_box = [x1, y1, x2, y2]
+        
+        # 2. YOLO 트랙 박스와 가장 겹치는(IoU) ArcFace 얼굴 찾기
+        best_iou = 0.0
+        best_emb = None
+        
+        for arc_face in all_arcfaces:
+            # arc_face.bbox 형태: [x1, y1, x2, y2]
+            iou = calc_iou_1to1(track_box, arc_face.bbox)
+            if iou > best_iou:
+                best_iou = iou
+                # 속성이름(normed_embedding 또는 embedding) 유연하게 가져오기
+                emb = getattr(arc_face, "normed_embedding", arc_face.embedding)
+                best_emb = l2_normalize(emb)
+                
+        # 겹치는 얼굴이 없거나 IoU가 너무 낮으면 임베딩 없음 처리
+        if best_iou < 0.1: 
+            best_emb = None
 
         stable_face_id = assign_stable_face_id(
             raw_track_id,
-            emb,
+            best_emb,
             current_frame_idx
         )
 
@@ -418,7 +410,7 @@ while True:
             f"TrackID={raw_track_id} "
             f"FaceID={stable_face_id} "
             f"BBox=({x1},{y1},{x2},{y2}) "
-            f"Embedding={'OK' if emb is not None else 'None'}"
+            f"Embedding={'OK' if best_emb is not None else 'None'}"
         )
 
         if stable_face_id is not None:
@@ -432,6 +424,7 @@ while True:
             sx1, sy1, sx2, sy2 = x1, y1, x2, y2
             label = f"Track ID {raw_track_id}"
             color = (0, 165, 255)
+
 
         cv2.rectangle(frame, (sx1, sy1), (sx2, sy2), color, 2)
         cv2.putText(
@@ -452,5 +445,6 @@ cv2.destroyAllWindows()
 
 logging.info("===== Experiment Finished =====")
 logging.info(f"Saved result to: {OUTPUT_PATH}")
+logging.info(f"Saved log to: {LOG_PATH}")
 print(f"Saved result to: {OUTPUT_PATH}")
 print(f"Saved log to: {LOG_PATH}")
