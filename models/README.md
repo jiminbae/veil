@@ -34,6 +34,26 @@ cd /home/jmbae/DL-project/models
 `evaluate.py`는 여러 face detector weight를 같은 동영상과 같은 파이프라인에서 반복 실행합니다.
 예를 들어 `yolov8l-face-lindevs.pt`와 학습한 `yolo26` face 모델을 전체 3개 파이프라인에서 비교하려면:
 
+### 비교 대상 face detector weight
+
+- `yolov8l-face-lindevs.pt`
+  - YOLOv8l 기반 face pretrained weight입니다.
+  - 현재 프로젝트에서는 외부 pretrained face detector baseline으로 사용합니다.
+  - 권장 위치:
+
+```text
+/home/jmbae/DL-project/models/telle/face_tracking/weights/yolov8l-face-lindevs.pt
+```
+
+- `yolo26x_widerface/weights/best.pt`
+  - [`yolo26x-face`](https://github.com/jiminbae/yolo26x-face) repo에서 WIDERFace 데이터셋으로 학습한 YOLO26x face detector weight입니다.
+  - 현재 비교에서 직접 학습한 face detector로 사용합니다.
+  - 권장 위치:
+
+```text
+/home/jmbae/yolo26x-face/runs/detect/runs/face/yolo26x_widerface/weights/best.pt
+```
+
 ```bash
 cd /home/jmbae/DL-project/models
 
@@ -141,6 +161,26 @@ important, but they are heavier than necessary for simple face blurring.
 `evaluate.py` runs multiple face detector weights under the same video and model
 pipeline. To compare `yolov8l-face-lindevs.pt` with the trained `yolo26` face
 model across all three pipelines:
+
+### Face Detector Weights
+
+- `yolov8l-face-lindevs.pt`
+  - A YOLOv8l-based pretrained face detector weight.
+  - It is used as the external pretrained face detector baseline in this project.
+  - Recommended location:
+
+```text
+/home/jmbae/DL-project/models/telle/face_tracking/weights/yolov8l-face-lindevs.pt
+```
+
+- `yolo26x_widerface/weights/best.pt`
+  - A YOLO26x face detector trained on WIDERFace in the [`yolo26x-face`](https://github.com/jiminbae/yolo26x-face) repository.
+  - It is used as the custom trained face detector in this comparison.
+  - Recommended location:
+
+```text
+/home/jmbae/yolo26x-face/runs/detect/runs/face/yolo26x_widerface/weights/best.pt
+```
 
 ```bash
 cd /home/jmbae/DL-project/models
