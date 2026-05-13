@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import logging
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from ultralytics import YOLO
 from boxmot.trackers.botsort.botsort import BotSort
@@ -70,6 +71,9 @@ LIVEPORTRAIT_MIN_FACE_AREA = 2500
 LIVEPORTRAIT_MIN_CROP_SIZE = 64
 LIVEPORTRAIT_MAX_ASPECT_RATIO = 2.5
 EDGE_MARGIN = 2
+EMBEDDING_REFRESH_INTERVAL = 5
+LOG_EVERY_N_FRAMES = 30
+CROP_WRITER_WORKERS = 2
 
 next_face_id = 1
 face_gallery = {}
@@ -84,6 +88,7 @@ target_track_ids = set()
 
 current_frame_idx = 0
 all_face_metadata = []
+crop_write_futures = []
 
 Path(OUTPUT_PATH).parent.mkdir(parents=True, exist_ok=True)
 Path(LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
@@ -107,6 +112,8 @@ logging.info(f"METADATA_PATH={METADATA_PATH}")
 logging.info(f"SIM_THRESHOLD={SIM_THRESHOLD}")
 logging.info(f"TARGET_THRESHOLD={TARGET_THRESHOLD}")
 logging.info(f"SMOOTH_ALPHA={SMOOTH_ALPHA}")
+logging.info(f"EMBEDDING_REFRESH_INTERVAL={EMBEDDING_REFRESH_INTERVAL}")
+logging.info(f"LOG_EVERY_N_FRAMES={LOG_EVERY_N_FRAMES}")
 
 
 def l2_normalize(x):
@@ -184,7 +191,7 @@ def detect_faces_multiscale(frame, detector, device):
     h, w = frame.shape[:2]
     all_dets = []
 
-    results = detector(
+    full_result = detector(
         frame,
         conf=0.40,
         imgsz=768,
@@ -192,9 +199,9 @@ def detect_faces_multiscale(frame, detector, device):
         device=device
     )[0]
 
-    if results.boxes is not None:
-        boxes = results.boxes.xyxy.cpu().numpy()
-        confs = results.boxes.conf.cpu().numpy()
+    if full_result.boxes is not None:
+        boxes = full_result.boxes.xyxy.cpu().numpy()
+        confs = full_result.boxes.conf.cpu().numpy()
 
         for box, conf in zip(boxes, confs):
             x1, y1, x2, y2 = box
@@ -207,23 +214,33 @@ def detect_faces_multiscale(frame, detector, device):
         (w // 2, h // 2, w, h),
     ]
 
+    tile_images = []
+    tile_offsets = []
+
     for tx1, ty1, tx2, ty2 in tiles:
         tile = frame[ty1:ty2, tx1:tx2]
 
         if tile.size == 0:
             continue
 
-        results = detector(
-            tile,
+        tile_images.append(tile)
+        tile_offsets.append((tx1, ty1))
+
+    if tile_images:
+        tile_results = detector(
+            tile_images,
             conf=0.40,
             imgsz=640,
             verbose=False,
             device=device
-        )[0]
+        )
 
-        if results.boxes is not None:
-            boxes = results.boxes.xyxy.cpu().numpy()
-            confs = results.boxes.conf.cpu().numpy()
+        for result, (tx1, ty1) in zip(tile_results, tile_offsets):
+            if result.boxes is None:
+                continue
+
+            boxes = result.boxes.xyxy.cpu().numpy()
+            confs = result.boxes.conf.cpu().numpy()
 
             for box, conf in zip(boxes, confs):
                 x1, y1, x2, y2 = box
@@ -304,6 +321,25 @@ def get_arcface_embedding(frame, box):
         emb = best_face.embedding
 
     return l2_normalize(emb)
+
+
+def get_track_embedding(frame, box, track_id, current_frame):
+    cached_emb = track_last_emb.get(track_id)
+
+    should_refresh = (
+        cached_emb is None
+        or current_frame % EMBEDDING_REFRESH_INTERVAL == 0
+    )
+
+    if not should_refresh:
+        return cached_emb, False
+
+    emb = get_arcface_embedding(frame, box)
+
+    if emb is None:
+        return cached_emb, False
+
+    return emb, True
 
 
 def get_target_image_paths(target_dir, pattern="target*"):
@@ -526,7 +562,7 @@ def apply_fallback_blur(frame, bbox):
     return frame
 
 
-def save_background_crop(crop, stable_face_id, raw_track_id, frame_idx):
+def save_background_crop(crop, stable_face_id, raw_track_id, frame_idx, executor):
     if crop is None or crop.size == 0:
         return None
 
@@ -539,7 +575,8 @@ def save_background_crop(crop, stable_face_id, raw_track_id, frame_idx):
     save_dir.mkdir(parents=True, exist_ok=True)
 
     save_path = save_dir / f"frame_{frame_idx:06d}.png"
-    cv2.imwrite(str(save_path), crop)
+    future = executor.submit(cv2.imwrite, str(save_path), crop.copy())
+    crop_write_futures.append((save_path, future))
 
     return str(save_path)
 
@@ -612,187 +649,210 @@ H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 out = cv2.VideoWriter(OUTPUT_PATH, fourcc, fps, (W, H))
 
-while True:
-    ret, frame = cap.read()
+with ThreadPoolExecutor(max_workers=CROP_WRITER_WORKERS) as crop_executor:
+    while True:
+        ret, frame = cap.read()
 
-    if not ret:
-        break
+        if not ret:
+            break
 
-    current_frame_idx += 1
+        current_frame_idx += 1
 
-    if current_frame_idx % 30 == 0:
-        cleanup_old_face_ids(current_frame_idx)
+        if current_frame_idx % 30 == 0:
+            cleanup_old_face_ids(current_frame_idx)
 
-    dets = detect_faces_multiscale(frame, detector, device)
+        dets = detect_faces_multiscale(frame, detector, device)
 
-    logging.info(
-        f"Frame={current_frame_idx} "
-        f"Detections={len(dets)}"
-    )
-
-    tracks = tracker.update(dets, frame)
-
-    logging.info(
-        f"Frame={current_frame_idx} "
-        f"Tracks={len(tracks)}"
-    )
-
-    for track in tracks:
-        x1, y1, x2, y2, raw_track_id = map(int, track[:5])
-
-        emb = get_arcface_embedding(frame, [x1, y1, x2, y2])
-
-        stable_face_id = assign_stable_face_id(
-            raw_track_id,
-            emb,
-            current_frame_idx
-        )
-
-        is_target = False
-        target_sim = -1.0
-
-        if emb is not None:
-            is_target, target_sim = check_target_match(
-                emb,
-                target_embeddings
+        if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
+            logging.info(
+                f"Frame={current_frame_idx} "
+                f"Detections={len(dets)}"
             )
 
-            if is_target:
+        tracks = tracker.update(dets, frame)
+
+        if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
+            logging.info(
+                f"Frame={current_frame_idx} "
+                f"Tracks={len(tracks)}"
+            )
+
+        for track in tracks:
+            x1, y1, x2, y2, raw_track_id = map(int, track[:5])
+
+            emb, embedding_refreshed = get_track_embedding(
+                frame,
+                [x1, y1, x2, y2],
+                raw_track_id,
+                current_frame_idx
+            )
+
+            stable_face_id = assign_stable_face_id(
+                raw_track_id,
+                emb,
+                current_frame_idx
+            )
+
+            is_target = False
+            target_sim = -1.0
+
+            if emb is not None:
+                is_target, target_sim = check_target_match(
+                    emb,
+                    target_embeddings
+                )
+
+                if is_target:
+                    target_track_ids.add(raw_track_id)
+
+                    if stable_face_id is not None:
+                        target_face_ids.add(stable_face_id)
+
+            if stable_face_id in target_face_ids:
                 target_track_ids.add(raw_track_id)
 
-                if stable_face_id is not None:
-                    target_face_ids.add(stable_face_id)
+            if raw_track_id in target_track_ids and stable_face_id is not None:
+                target_face_ids.add(stable_face_id)
 
-        if stable_face_id in target_face_ids:
-            target_track_ids.add(raw_track_id)
-
-        if raw_track_id in target_track_ids and stable_face_id is not None:
-            target_face_ids.add(stable_face_id)
-
-        if stable_face_id is not None:
-            sx1, sy1, sx2, sy2 = smooth_bbox(
-                stable_face_id,
-                [x1, y1, x2, y2]
-            )
-        else:
-            sx1, sy1, sx2, sy2 = x1, y1, x2, y2
-
-        smoothed_bbox = [sx1, sy1, sx2, sy2]
-
-        is_target_final = (
-            stable_face_id in target_face_ids
-            if stable_face_id is not None
-            else raw_track_id in target_track_ids
-        )
-
-        is_background = not is_target_final
-
-        raw_bbox = [x1, y1, x2, y2]
-
-        raw_crop = crop_with_padding(frame, raw_bbox)
-        smooth_crop = crop_with_padding(frame, smoothed_bbox)
-
-        quality, fallback_reasons = assess_face_quality(
-            frame,
-            raw_bbox,
-            emb,
-            raw_crop
-        )
-
-        crop_path = None
-
-        if is_background:
-            if quality == "GOOD":
-                crop_path = save_background_crop(
-                    smooth_crop,
+            if stable_face_id is not None:
+                sx1, sy1, sx2, sy2 = smooth_bbox(
                     stable_face_id,
-                    raw_track_id,
-                    current_frame_idx
+                    [x1, y1, x2, y2]
                 )
             else:
-                frame = apply_fallback_blur(frame, smoothed_bbox)
+                sx1, sy1, sx2, sy2 = x1, y1, x2, y2
 
-        face_data = make_face_data(
-            frame_idx=current_frame_idx,
-            raw_track_id=raw_track_id,
-            stable_face_id=stable_face_id,
-            bbox=[x1, y1, x2, y2],
-            smoothed_bbox=smoothed_bbox,
-            is_target=is_target_final,
-            is_background=is_background,
-            target_sim=target_sim,
-            embedding_ok=emb is not None,
-            quality=quality,
-            fallback_reasons=fallback_reasons,
-            crop_path=crop_path
-        )
+            smoothed_bbox = [sx1, sy1, sx2, sy2]
 
-        all_face_metadata.append(face_data)
+            is_target_final = (
+                stable_face_id in target_face_ids
+                if stable_face_id is not None
+                else raw_track_id in target_track_ids
+            )
 
-        target_track_flag = raw_track_id in target_track_ids
-        target_face_flag = (
-            stable_face_id in target_face_ids
-            if stable_face_id is not None
-            else False
-        )
+            is_background = not is_target_final
 
-        logging.info(
-            f"Frame={current_frame_idx} "
-            f"TrackID={raw_track_id} "
-            f"FaceID={stable_face_id} "
-            f"BBox=({x1},{y1},{x2},{y2}) "
-            f"SmoothedBBox=({sx1},{sy1},{sx2},{sy2}) "
-            f"Embedding={'OK' if emb is not None else 'None'} "
-            f"TargetSim={target_sim:.4f} "
-            f"TargetDirect={is_target} "
-            f"TargetFinal={is_target_final} "
-            f"TargetTrack={target_track_flag} "
-            f"TargetFace={target_face_flag} "
-            f"Background={is_background} "
-            f"Quality={quality} "
-            f"FallbackReasons={fallback_reasons} "
-            f"CropPath={crop_path}"
-        )
+            raw_bbox = [x1, y1, x2, y2]
 
-        if stable_face_id is not None:
-            if is_target_final:
-                label = f"TARGET ID {stable_face_id}"
-                color = (0, 0, 255)
-            else:
+            raw_crop = crop_with_padding(frame, raw_bbox)
+            smooth_crop = crop_with_padding(frame, smoothed_bbox)
+
+            quality, fallback_reasons = assess_face_quality(
+                frame,
+                raw_bbox,
+                emb,
+                raw_crop
+            )
+
+            crop_path = None
+
+            if is_background:
                 if quality == "GOOD":
-                    label = f"BG ID {stable_face_id} CROP"
-                    color = (0, 255, 0)
+                    crop_path = save_background_crop(
+                        smooth_crop,
+                        stable_face_id,
+                        raw_track_id,
+                        current_frame_idx,
+                        crop_executor
+                    )
                 else:
-                    label = f"BG ID {stable_face_id} BLUR"
-                    color = (0, 165, 255)
-        else:
-            if raw_track_id in target_track_ids:
-                label = f"TARGET Track ID {raw_track_id}"
-                color = (0, 0, 255)
+                    frame = apply_fallback_blur(frame, smoothed_bbox)
+
+            face_data = make_face_data(
+                frame_idx=current_frame_idx,
+                raw_track_id=raw_track_id,
+                stable_face_id=stable_face_id,
+                bbox=[x1, y1, x2, y2],
+                smoothed_bbox=smoothed_bbox,
+                is_target=is_target_final,
+                is_background=is_background,
+                target_sim=target_sim,
+                embedding_ok=emb is not None,
+                quality=quality,
+                fallback_reasons=fallback_reasons,
+                crop_path=crop_path
+            )
+
+            all_face_metadata.append(face_data)
+
+            target_track_flag = raw_track_id in target_track_ids
+            target_face_flag = (
+                stable_face_id in target_face_ids
+                if stable_face_id is not None
+                else False
+            )
+
+            if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
+                logging.info(
+                    f"Frame={current_frame_idx} "
+                    f"TrackID={raw_track_id} "
+                    f"FaceID={stable_face_id} "
+                    f"BBox=({x1},{y1},{x2},{y2}) "
+                    f"SmoothedBBox=({sx1},{sy1},{sx2},{sy2}) "
+                    f"Embedding={'OK' if emb is not None else 'None'} "
+                    f"EmbeddingRefreshed={embedding_refreshed} "
+                    f"TargetSim={target_sim:.4f} "
+                    f"TargetDirect={is_target} "
+                    f"TargetFinal={is_target_final} "
+                    f"TargetTrack={target_track_flag} "
+                    f"TargetFace={target_face_flag} "
+                    f"Background={is_background} "
+                    f"Quality={quality} "
+                    f"FallbackReasons={fallback_reasons} "
+                    f"CropPath={crop_path}"
+                )
+
+            if stable_face_id is not None:
+                if is_target_final:
+                    label = f"TARGET ID {stable_face_id}"
+                    color = (0, 0, 255)
+                else:
+                    if quality == "GOOD":
+                        label = f"BG ID {stable_face_id} CROP"
+                        color = (0, 255, 0)
+                    else:
+                        label = f"BG ID {stable_face_id} BLUR"
+                        color = (0, 165, 255)
             else:
-                if quality == "GOOD":
-                    label = f"BG Track {raw_track_id} CROP"
-                    color = (0, 255, 0)
+                if raw_track_id in target_track_ids:
+                    label = f"TARGET Track ID {raw_track_id}"
+                    color = (0, 0, 255)
                 else:
-                    label = f"BG Track {raw_track_id} BLUR"
-                    color = (0, 165, 255)
+                    if quality == "GOOD":
+                        label = f"BG Track {raw_track_id} CROP"
+                        color = (0, 255, 0)
+                    else:
+                        label = f"BG Track {raw_track_id} BLUR"
+                        color = (0, 165, 255)
 
-        cv2.rectangle(frame, (sx1, sy1), (sx2, sy2), color, 2)
-        cv2.putText(
-            frame,
-            label,
-            (sx1, max(20, sy1 - 10)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.7,
-            color,
-            2
-        )
+            cv2.rectangle(frame, (sx1, sy1), (sx2, sy2), color, 2)
+            cv2.putText(
+                frame,
+                label,
+                (sx1, max(20, sy1 - 10)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                color,
+                2
+            )
 
-    out.write(frame)
+        out.write(frame)
 
 cap.release()
 out.release()
 cv2.destroyAllWindows()
+
+failed_crop_writes = []
+
+for save_path, future in crop_write_futures:
+    try:
+        if not future.result():
+            failed_crop_writes.append(str(save_path))
+    except Exception as e:
+        failed_crop_writes.append(f"{save_path}: {e}")
+
+if failed_crop_writes:
+    logging.warning(f"Failed crop writes: {failed_crop_writes[:20]}")
 
 with open(METADATA_PATH, "w", encoding="utf-8") as f:
     json.dump(all_face_metadata, f, ensure_ascii=False, indent=2)
