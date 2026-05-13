@@ -47,6 +47,15 @@ Thumbs.db
 # Evaluation Results
 evaluation_results/
 
+# Project-local assets and generated files
+project/venv/
+project/outputs/
+project/face_tracking/outputs/
+project/face_tracking/target/
+project/face_tracking/videos/
+project/face_tracking/weights/
+project/boxmot/models/
+
 # Data
 datasets/
 data/
