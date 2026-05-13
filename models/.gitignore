@@ -50,11 +50,15 @@ evaluation_results/
 # Project-local assets and generated files
 project/venv/
 project/outputs/
-project/face_tracking/outputs/
-project/face_tracking/target/
-project/face_tracking/videos/
-project/face_tracking/weights/
-project/boxmot/models/
+project/face_tracking/*/**
+!project/face_tracking/*/
+!project/face_tracking/*/**/
+!project/face_tracking/*/.gitkeep
+!project/face_tracking/*/**/.gitkeep
+project/boxmot/models/**
+!project/boxmot/models/
+!project/boxmot/models/**/
+!project/boxmot/models/.gitkeep
 
 # Data
 datasets/
