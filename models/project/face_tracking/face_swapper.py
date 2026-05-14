@@ -50,7 +50,7 @@ class LPProcessor:
         cropped = crop_info['img_crop']
         self.source_image = cropped
         
-        with torch.no_grad():
+        with torch.inference_mode():
             source_tensor = self.wrapper.prepare_source(cropped)
             # 1. 소스 특징량(f_s) 추출
             self.f_s = self.wrapper.appearance_feature_extractor(source_tensor)
@@ -109,7 +109,7 @@ class LPProcessor:
 
         driving_crop = cv2.resize(driving_crop, (256, 256))
         
-        with torch.no_grad():
+        with torch.inference_mode():
             # 1. Driving 키포인트 추출
             if hasattr(self.wrapper, "prepare_driving"):
                 driving_tensor = self.wrapper.prepare_driving(driving_crop)

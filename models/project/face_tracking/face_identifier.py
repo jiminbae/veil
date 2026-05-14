@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from pathlib import Path
 from insightface.app import FaceAnalysis
+import onnxruntime as ort
 
 from config import (
     TARGET_THRESHOLD,
@@ -13,13 +14,23 @@ from config import (
 from face_utils import l2_normalize, crop_with_padding
 
 
-# InsightFace 초기화 
+def get_face_analysis_runtime():
+    available_providers = ort.get_available_providers()
+
+    if "CUDAExecutionProvider" in available_providers:
+        return ["CUDAExecutionProvider", "CPUExecutionProvider"], 0
+
+    return ["CPUExecutionProvider"], -1
+
+
+# InsightFace 초기화
+FACE_PROVIDERS, FACE_CTX_ID = get_face_analysis_runtime()
 face_app = FaceAnalysis(
     name="buffalo_l",
-    providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+    providers=FACE_PROVIDERS
 )
 
-face_app.prepare(ctx_id=0, det_size=(640, 640))
+face_app.prepare(ctx_id=FACE_CTX_ID, det_size=(640, 640))
 
 
 # 전역 상태

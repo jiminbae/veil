@@ -316,7 +316,7 @@ def main():
 
             if not ret:
                 break
-            original_frame = frame.copy()
+            original_frame = frame
             render_frame = frame.copy()
 
             current_frame_idx += 1
