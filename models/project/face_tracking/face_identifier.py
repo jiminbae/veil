@@ -15,6 +15,9 @@ from face_utils import l2_normalize, crop_with_padding
 
 
 def get_face_analysis_runtime():
+    if hasattr(ort, "preload_dlls"):
+        ort.preload_dlls()
+
     available_providers = ort.get_available_providers()
 
     if "CUDAExecutionProvider" in available_providers:
