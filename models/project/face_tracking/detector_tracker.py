@@ -20,11 +20,11 @@ def init_tracker(device):
         reid_weights=Path(REID_MODEL_PATH),
         device=device,
         half=False,
-        with_reid=False,
-        track_buffer=150,
-        match_thresh=0.6,
+        with_reid=True,
+        track_buffer=250,
+        match_thresh=0.5,
         proximity_thresh=0.7,
-        appearance_thresh=0.5
+        appearance_thresh=0.4
     )
 
 
@@ -92,14 +92,9 @@ def filter_detections(dets):
 
 
 def detect_faces_multiscale(frame, detector, device):
-    """
-    전체 프레임 1회 + 4분할 tile batch 1회로 얼굴 탐지.
-    tile은 리스트로 묶어 한 번에 배치 추론.
-    """
     h, w = frame.shape[:2]
     all_dets = []
 
-    # 전체 프레임 추론
     full_result = detector(
         frame,
         conf=0.40,
@@ -116,12 +111,11 @@ def detect_faces_multiscale(frame, detector, device):
             x1, y1, x2, y2 = box
             all_dets.append([x1, y1, x2, y2, conf, 0])
 
-    # 4분할 tile batch 추론
     tiles = [
-        (0,     0,     w // 2, h // 2),
-        (w // 2, 0,    w,      h // 2),
-        (0,     h // 2, w // 2, h),
-        (w // 2, h // 2, w,    h),
+        (0, 0, w // 2, h // 2),
+        (w // 2, 0, w, h // 2),
+        (0, h // 2, w // 2, h),
+        (w // 2, h // 2, w, h),
     ]
 
     tile_images = []
