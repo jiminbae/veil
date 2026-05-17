@@ -12,10 +12,10 @@ TARGET_DIR = str(BASE_DIR / "target")
 TARGET_PATTERN = "target*"
 TARGET_IMAGE_PATH = str(BASE_DIR / "virtual_face" / "fake_face.jpg")
 
-OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target1.mp4")
-LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target1_log.txt")
-CROP_ROOT = str(BASE_DIR / "outputs/crop/crop1")
-METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata1.json")
+OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target2.mp4")
+LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target2_log.txt")
+CROP_ROOT = str(BASE_DIR / "outputs/crop/crop2")
+METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata2.json")
 
 LIVEPORTRAIT_DIR = str(PROJECT_DIR / "LivePortrait")
 
