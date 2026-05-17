@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 from pathlib import Path
 from ultralytics import YOLO
 from boxmot.trackers.botsort.botsort import BotSort
@@ -16,9 +17,11 @@ def init_detector():
 
 
 def init_tracker(device):
+    tracker_device = normalize_tracker_device(device)
+
     return BotSort(
         reid_weights=Path(REID_MODEL_PATH),
-        device=device,
+        device=tracker_device,
         half=False,
         with_reid=True,
         track_buffer=250,
@@ -26,6 +29,13 @@ def init_tracker(device):
         proximity_thresh=0.7,
         appearance_thresh=0.4
     )
+
+
+def normalize_tracker_device(device):
+    if isinstance(device, str) and device.lower() == "cuda":
+        return "0" if torch.cuda.device_count() > 0 else "cpu"
+
+    return device
 
 
 def compute_iou(box, boxes):
