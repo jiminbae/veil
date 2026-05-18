@@ -323,7 +323,7 @@ def compute_box_diag(box):
 
 
 # bbox smoothing
-def smooth_bbox(face_id, bbox, alpha=0.65):
+def smooth_bbox(face_id, bbox, alpha=SMOOTH_ALPHA):
     bbox = np.array(bbox, dtype=np.float32)
 
     if face_id is None:
