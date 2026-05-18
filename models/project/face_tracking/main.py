@@ -2,8 +2,8 @@ import cv2
 import logging
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+
 from face_swapper import FaceSwapper
-from face_stitcher import FaceStitcher
 
 from config import (
     VIDEO_PATH,
@@ -22,7 +22,6 @@ from config import (
     LOG_EVERY_N_FRAMES,
     CROP_WRITER_WORKERS,
     ENABLE_FACE_SWAP,
-    STITCH_BLUR_KERNEL,
     device,
 )
 
@@ -86,8 +85,8 @@ def load_target_embeddings():
         raise RuntimeError("No valid target embeddings loaded")
 
     logging.info(f"Total target embeddings loaded: {len(target_embeddings)}")
-
     return target_embeddings
+
 
 def process_track(
     original_frame,
@@ -98,23 +97,24 @@ def process_track(
     crop_executor,
     crop_write_futures,
     swapper=None,
-    stitcher=None
 ):
-    """
-    트랙 하나에 대해 embedding → 타겟 판별 → bbox 스무딩 → 품질 판단 → crop/blur → face_data 생성.
-    original_frame은 분석/crop 기준으로 유지하고,
-    render_frame만 수정(swap/blur/시각화)한 뒤 face_data를 반환.
-    """
     x1, y1, x2, y2, raw_track_id = map(int, track[:5])
 
-    # embedding 캐시 적용 (EMBEDDING_REFRESH_INTERVAL 프레임마다 재계산)
+    # embedding 추출 / 캐시
     emb, embedding_refreshed = get_track_embedding(
-        original_frame, [x1, y1, x2, y2], raw_track_id, current_frame_idx
+        original_frame,
+        [x1, y1, x2, y2],
+        raw_track_id,
+        current_frame_idx
     )
 
-    stable_face_id = assign_stable_face_id(raw_track_id, emb, current_frame_idx)
+    stable_face_id = assign_stable_face_id(
+        raw_track_id,
+        emb,
+        current_frame_idx
+    )
 
-    # 타겟 매칭
+    # Target 판별
     is_target = False
     target_sim = -1.0
 
@@ -135,10 +135,14 @@ def process_track(
 
     # bbox smoothing
     if stable_face_id is not None:
-        sx1, sy1, sx2, sy2 = smooth_bbox(stable_face_id, [x1, y1, x2, y2])
+        sx1, sy1, sx2, sy2 = smooth_bbox(
+            stable_face_id,
+            [x1, y1, x2, y2]
+        )
     else:
         sx1, sy1, sx2, sy2 = x1, y1, x2, y2
 
+    raw_bbox = [x1, y1, x2, y2]
     smoothed_bbox = [sx1, sy1, sx2, sy2]
 
     is_target_final = (
@@ -149,41 +153,50 @@ def process_track(
 
     is_background = not is_target_final
 
-    swap_success = False
-
-    if is_target_final and swapper is not None and stitcher is not None:
-
-        fake_face = swapper.swap(original_frame, smoothed_bbox)
-
-        if fake_face is not None:
-            render_frame[:] = stitcher.stitch(
-                render_frame,
-                fake_face,
-                smoothed_bbox,
-                angle=0
-            )
-            swap_success = True
-
-    # 품질 판단: raw bbox 기준
-    raw_bbox = [x1, y1, x2, y2]
+    # 품질 판단
     raw_crop = crop_with_padding(original_frame, raw_bbox)
     smooth_crop = crop_with_padding(original_frame, smoothed_bbox)
 
-    quality, fallback_reasons = assess_face_quality(original_frame, raw_bbox, emb, raw_crop)
+    quality, fallback_reasons = assess_face_quality(
+        original_frame,
+        raw_bbox,
+        emb,
+        raw_crop
+    )
 
-    # 배경 인물: GOOD이면 smooth crop 저장, BAD이면 blur
     crop_path = None
+    swap_success = False
 
+    # 보호 대상은 원본 유지, 배경 얼굴만 swap 또는 blur
     if is_background:
         if quality == "GOOD":
+            if swapper is not None:
+                swapped_frame, mask = swapper.swap_into_frame(
+                    render_frame,
+                    smoothed_bbox,
+                    landmarks=None
+                )
+
+                if swapped_frame is not None:
+                    render_frame[:] = swapped_frame
+                    swap_success = True
+
             crop_path = save_background_crop(
-                smooth_crop, stable_face_id, raw_track_id,
-                current_frame_idx, crop_executor, crop_write_futures
+                smooth_crop,
+                stable_face_id,
+                raw_track_id,
+                current_frame_idx,
+                crop_executor,
+                crop_write_futures
             )
+
+            if not swap_success:
+                render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
+
         else:
             render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
 
-    # face_data 생성
+    # metadata 생성
     face_data = make_face_data(
         frame_idx=current_frame_idx,
         raw_track_id=raw_track_id,
@@ -199,7 +212,7 @@ def process_track(
         crop_path=crop_path
     )
 
-    # 로그 기록 (N프레임마다)
+    # 로그 기록
     if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
         target_track_flag = raw_track_id in target_track_ids
         target_face_flag = (
@@ -207,6 +220,7 @@ def process_track(
             if stable_face_id is not None
             else False
         )
+
         logging.info(
             f"Frame={current_frame_idx} "
             f"TrackID={raw_track_id} "
@@ -221,6 +235,7 @@ def process_track(
             f"TargetTrack={target_track_flag} "
             f"TargetFace={target_face_flag} "
             f"Background={is_background} "
+            f"SwapSuccess={swap_success} "
             f"Quality={quality} "
             f"FallbackReasons={fallback_reasons} "
             f"CropPath={crop_path}"
@@ -229,15 +244,13 @@ def process_track(
     # 시각화
     if stable_face_id is not None:
         if is_target_final:
-            label = (
-                f"SWAPPED ID {stable_face_id}"
-                if swap_success
-                else f"TARGET ID {stable_face_id}"
-            )
+            label = f"TARGET ID {stable_face_id}"
             color = (0, 0, 255)
-
         else:
-            if quality == "GOOD":
+            if swap_success:
+                label = f"BG ID {stable_face_id} SWAP"
+                color = (255, 0, 255)
+            elif quality == "GOOD":
                 label = f"BG ID {stable_face_id} CROP"
                 color = (0, 255, 0)
             else:
@@ -245,13 +258,13 @@ def process_track(
                 color = (0, 165, 255)
     else:
         if raw_track_id in target_track_ids:
-            label = (
-                f"SWAPPED Track {raw_track_id}"
-                if swap_success else f"TARGET Track ID {raw_track_id}"
-            )
+            label = f"TARGET Track {raw_track_id}"
             color = (0, 0, 255)
         else:
-            if quality == "GOOD":
+            if swap_success:
+                label = f"BG Track {raw_track_id} SWAP"
+                color = (255, 0, 255)
+            elif quality == "GOOD":
                 label = f"BG Track {raw_track_id} CROP"
                 color = (0, 255, 0)
             else:
@@ -280,15 +293,12 @@ def main():
     target_embeddings = load_target_embeddings()
 
     swapper = None
-    stitcher = None
 
     if ENABLE_FACE_SWAP:
         swapper = FaceSwapper(TARGET_IMAGE_PATH, device=device)
-        stitcher = FaceStitcher(blur_kernel=STITCH_BLUR_KERNEL)
         logging.info(f"Face swap enabled: {TARGET_IMAGE_PATH}")
     else:
         logging.info("Face swap disabled")
-
 
     cap = cv2.VideoCapture(VIDEO_PATH)
 
@@ -316,6 +326,7 @@ def main():
 
             if not ret:
                 break
+
             original_frame = frame
             render_frame = frame.copy()
 
@@ -324,7 +335,12 @@ def main():
             if current_frame_idx % 30 == 0:
                 cleanup_old_face_ids(current_frame_idx)
 
-            dets = detect_faces_multiscale(original_frame, detector, device)
+            dets = detect_faces_multiscale(
+                original_frame,
+                detector,
+                device,
+                current_frame_idx
+            )
 
             if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
                 logging.info(
@@ -347,8 +363,7 @@ def main():
                     current_frame_idx,
                     crop_executor,
                     crop_write_futures,
-                    swapper,
-                    stitcher
+                    swapper
                 )
                 all_face_metadata.append(face_data)
 
@@ -358,7 +373,7 @@ def main():
     out.release()
     cv2.destroyAllWindows()
 
-    # 비동기 crop 저장 결과 검증
+    # 비동기 crop 저장 결과 확인
     failed_crop_writes = []
 
     for save_path, future in crop_write_futures:
@@ -371,7 +386,6 @@ def main():
     if failed_crop_writes:
         logging.warning(f"Failed crop writes: {failed_crop_writes[:20]}")
 
-    # metadata JSON 저장
     save_metadata(METADATA_PATH, all_face_metadata)
 
     logging.info("===== Experiment Finished =====")
