@@ -12,10 +12,10 @@ TARGET_DIR = str(BASE_DIR / "target")
 TARGET_PATTERN = "target*"
 TARGET_IMAGE_PATH = str(BASE_DIR / "virtual_face" / "fake_face.jpg")
 
-OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target2.mp4")
-LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target2_log.txt")
-CROP_ROOT = str(BASE_DIR / "outputs/crop/crop2")
-METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata2.json")
+OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target3.mp4")
+LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target3_log.txt")
+CROP_ROOT = str(BASE_DIR / "outputs/crop/crop3")
+METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata3.json")
 
 LIVEPORTRAIT_DIR = str(PROJECT_DIR / "LivePortrait")
 
@@ -24,13 +24,30 @@ STITCH_BLUR_KERNEL = 21
 
 device = "cuda"
 
-# 얼굴 인식 임계값
+# 얼굴 인식 / Target 판별 기준
 SIM_THRESHOLD = 0.38
 TARGET_THRESHOLD = 0.50
 SMOOTH_ALPHA = 0.8
 MAX_FACE_AGE = 300
-MIN_FACE_AREA = 400
+
+# Detection 필터 기준
+MIN_FACE_AREA = 500
 MAX_ASPECT_RATIO = 2.2
+
+# Detection 설정
+DETECTION_CONF = 0.40
+FULL_DETECT_IMGSZ = 768
+TILE_DETECT_IMGSZ = 640
+TILE_DETECT_INTERVAL = 3
+NMS_IOU_THRESHOLD = 0.35
+MAX_DETECTIONS_PER_FRAME = 60
+
+# BoT-SORT Tracking 설정
+TRACK_BUFFER = 150
+MATCH_THRESH = 0.55
+PROXIMITY_THRESH = 0.65
+APPEARANCE_THRESH = 0.45
+USE_BOTSORT_REID = False
 
 # LivePortrait 품질 기준
 LIVEPORTRAIT_MIN_FACE_AREA = 2500
@@ -39,6 +56,6 @@ LIVEPORTRAIT_MAX_ASPECT_RATIO = 2.5
 EDGE_MARGIN = 2
 
 # 성능 최적화 설정
-EMBEDDING_REFRESH_INTERVAL = 5   # N프레임마다 embedding 재계산
-LOG_EVERY_N_FRAMES = 30          # N프레임마다 상세 로그
-CROP_WRITER_WORKERS = 2          # 비동기 crop 저장 worker 수
+EMBEDDING_REFRESH_INTERVAL = 5
+LOG_EVERY_N_FRAMES = 30
+CROP_WRITER_WORKERS = 2
