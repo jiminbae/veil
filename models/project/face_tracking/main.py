@@ -282,7 +282,7 @@ def process_track(
         2
     )
 
-    return face_data
+    return face_data, render_frame
 
 
 def main():
@@ -355,7 +355,7 @@ def main():
                 )
 
             for track in tracks:
-                face_data = process_track(
+                face_data, render_frame = process_track(
                     original_frame,
                     render_frame,
                     track,
@@ -368,6 +368,25 @@ def main():
                 all_face_metadata.append(face_data)
 
             out.write(render_frame)
+
+            if current_frame_idx % 100 == 0:
+                failed = []
+                still_running = []
+
+                for save_path, future in crop_write_futures:
+                    if future.done():
+                        try:
+                            if not future.result():
+                                failed.append(str(save_path))
+                        except Exception as e:
+                            failed.append(f"{save_path}: {e}")
+                    else:
+                        still_running.append((save_path, future))
+
+                if failed:
+                    logging.warning(f"Failed crop writes (frame {current_frame_idx}): {failed}")
+
+                crop_write_futures = still_running
 
     cap.release()
     out.release()
