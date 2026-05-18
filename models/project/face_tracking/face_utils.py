@@ -1,6 +1,6 @@
 import numpy as np
 
-
+# embedding L2 정규화
 def l2_normalize(x):
     x = np.asarray(x, dtype=np.float32)
     norm = np.linalg.norm(x)
@@ -8,7 +8,7 @@ def l2_normalize(x):
         return None
     return x / norm
 
-
+# bbox를 프레임 내부로 클리핑
 def clip_bbox(frame, box):
     h, w = frame.shape[:2]
     x1, y1, x2, y2 = map(int, box)
@@ -23,7 +23,7 @@ def clip_bbox(frame, box):
 
     return [x1, y1, x2, y2]
 
-
+# 얼굴 crop에 padding 추가
 def crop_with_padding(frame, box, pad_ratio=0.4):
     h, w = frame.shape[:2]
     x1, y1, x2, y2 = map(int, box)
