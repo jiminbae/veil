@@ -12,15 +12,17 @@ from LivePortrait.src.utils.cropper import Cropper
 from LivePortrait.src.config.inference_config import InferenceConfig
 from LivePortrait.src.config.crop_config import CropConfig
 
+
 class LPProcessor:
     def __init__(self, device_type="cpu"):
         is_cuda = (device_type == "cuda" and torch.cuda.is_available())
-        
+
         self.inference_cfg = InferenceConfig(
             flag_force_cpu=not is_cuda,
             flag_use_half_precision=is_cuda,
             device_id=0 if is_cuda else -1
         )
+
         self.crop_cfg = CropConfig()
 
         print(f"Initializing LivePortrait on: {'GPU' if is_cuda else 'CPU'}")
@@ -29,34 +31,36 @@ class LPProcessor:
             inference_cfg=self.inference_cfg,
             crop_cfg=self.crop_cfg
         )
-        
+
         self.wrapper = self.pipeline.live_portrait_wrapper
         self.cropper = Cropper(crop_cfg=self.crop_cfg)
-        
+
         self.source_image = None
         self.f_s = None
         self.x_s_info = None
 
     def set_source(self, image_bgr):
-        if image_bgr is None: 
+        if image_bgr is None:
             return
-        
+
         image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         crop_info = self.cropper.crop_source_image(image_rgb, self.crop_cfg)
 
-        if crop_info is None or 'img_crop' not in crop_info:
+        if crop_info is None or "img_crop" not in crop_info:
             raise RuntimeError("No face detected in source image.")
 
-        cropped = crop_info['img_crop']
+        cropped = crop_info["img_crop"]
         self.source_image = cropped
-        
+
         with torch.inference_mode():
             source_tensor = self.wrapper.prepare_source(cropped)
-            # 1. 소스 특징량(f_s) 추출
+
+            # 소스 얼굴 특징 추출
             self.f_s = self.wrapper.appearance_feature_extractor(source_tensor)
-            # 2. 소스 키포인트(x_s) 추출
+
+            # 소스 얼굴 키포인트 추출
             self.x_s_info = self.wrapper.get_kp_info(source_tensor)
-            
+
         print("Success: Source face features extracted.")
 
     def inference(self, driving_bgr):
@@ -90,7 +94,10 @@ class LPProcessor:
                 if isinstance(first_crop, dict):
                     if "img_crop" in first_crop:
                         driving_crop = first_crop["img_crop"]
-                    elif "frame_crop_lst" in first_crop and len(first_crop["frame_crop_lst"]) > 0:
+                    elif (
+                        "frame_crop_lst" in first_crop
+                        and len(first_crop["frame_crop_lst"]) > 0
+                    ):
                         driving_crop = first_crop["frame_crop_lst"][0]
                     else:
                         return None
@@ -102,15 +109,15 @@ class LPProcessor:
         else:
             crop_info = self.cropper.crop_source_image(driving_rgb, self.crop_cfg)
 
-            if crop_info is None or 'img_crop' not in crop_info:
+            if crop_info is None or "img_crop" not in crop_info:
                 return None
 
-            driving_crop = crop_info['img_crop']
+            driving_crop = crop_info["img_crop"]
 
         driving_crop = cv2.resize(driving_crop, (256, 256))
-        
+
         with torch.inference_mode():
-            # 1. Driving 키포인트 추출
+            # Driving 얼굴 키포인트 추출
             if hasattr(self.wrapper, "prepare_driving"):
                 driving_tensor = self.wrapper.prepare_driving(driving_crop)
             elif hasattr(self.wrapper, "prepare_driving_video"):
@@ -119,78 +126,159 @@ class LPProcessor:
                 driving_tensor = self.wrapper.prepare_source(driving_crop)
 
             x_d_info = self.wrapper.get_kp_info(driving_tensor)
-            
-            # 2. 딕셔너리에서 'kp' 텐서만 추출
-            kp_s = self.x_s_info['kp']
-            kp_d = x_d_info['kp']
-            
-            # 3. Warping 수행
-            # warping_network.py 분석 결과: 반환값은 {'out': tensor, 'occlusion_map': tensor}
-            warping_result = self.wrapper.warping_module(self.f_s, kp_d, kp_s)
-            
-            # [핵심 수정] 딕셔너리에서 'out' 키에 해당하는 실제 텐서만 추출
+
+            kp_s = self.x_s_info["kp"]
+            kp_d = x_d_info["kp"]
+
+            # source identity + driving motion 반영
+            warping_result = self.wrapper.warping_module(
+                self.f_s,
+                kp_d,
+                kp_s
+            )
+
             if isinstance(warping_result, dict):
-                warped_feature = warping_result['out']
+                warped_feature = warping_result["out"]
             else:
                 warped_feature = warping_result
 
-            # 4. Generator 호출 (이제 순수 텐서가 전달됨)
             out_tensor = self.wrapper.spade_generator(warped_feature)
-            
-        # 5. 후처리
-        if out_tensor.ndim == 4: 
+
+        if out_tensor.ndim == 4:
             out_tensor = out_tensor[0]
-            
+
         result = out_tensor.permute(1, 2, 0).cpu().numpy()
         result = (result * 255).clip(0, 255).astype(np.uint8)
-        
+
         return cv2.cvtColor(result, cv2.COLOR_RGB2BGR)
 
 
 class FaceSwapper:
     def __init__(self, target_image_path, device="cpu"):
         self.processor = LPProcessor(device_type=device)
+
         target_img = cv2.imread(target_image_path)
+
         if target_img is None:
             raise RuntimeError(f"Cannot read target image: {target_image_path}")
+
         self.processor.set_source(target_img)
 
     def swap(self, frame, bbox):
         x1, y1, x2, y2 = map(int, bbox)
         h, w = frame.shape[:2]
 
-        # LivePortrait의 내부 크로퍼가 랜드마크를 찾을 수 있는 '공간'을 제공함
-        bw, bh = x2 - x1, y2 - y1
-        pad_w, pad_h = int(bw * 0.5), int(bh * 0.5)
+        bw = x2 - x1
+        bh = y2 - y1
+
+        if bw <= 0 or bh <= 0:
+            return None
+
+        # LivePortrait 내부 cropper가 얼굴을 찾을 수 있도록 padding 추가
+        pad_w = int(bw * 0.5)
+        pad_h = int(bh * 0.5)
 
         px1 = max(0, x1 - pad_w)
         py1 = max(0, y1 - pad_h)
         px2 = min(w, x2 + pad_w)
         py2 = min(h, y2 + pad_h)
 
-        # 확장된 영역으로 크롭
         face_crop_padded = frame[py1:py2, px1:px2]
-        if face_crop_padded.size == 0: 
+
+        if face_crop_padded.size == 0:
             return None
 
         try:
-            # 확장된 이미지를 넘겨주어 내부 크로퍼가 정상 작동하게 함
             swapped_padded = self.processor.inference(face_crop_padded)
-            if swapped_padded is None: 
+
+            if swapped_padded is None:
                 return None
 
-            # 크롭된 이미지 내에서의 상대적 좌표 계산
-            rel_x1, rel_y1 = x1 - px1, y1 - py1
-            
-            # swapped_padded는 LivePortrait 출력 크기(보통 256x256 등)이므로 리사이즈 필요
-            swapped_resized = cv2.resize(swapped_padded, (px2 - px1, py2 - py1))
-            final_face = swapped_resized[rel_y1:rel_y1 + bh, rel_x1:rel_x1 + bw]
+            rel_x1 = x1 - px1
+            rel_y1 = y1 - py1
+
+            padded_w = px2 - px1
+            padded_h = py2 - py1
+
+            swapped_resized = cv2.resize(
+                swapped_padded,
+                (padded_w, padded_h)
+            )
+
+            final_face = swapped_resized[
+                rel_y1:rel_y1 + bh,
+                rel_x1:rel_x1 + bw
+            ]
 
             if final_face.size == 0:
                 return None
-            
+
             return final_face
-            
+
         except Exception as e:
             print(f"Inference error during padded swap: {e}")
             return None
+
+    def swap_into_frame(self, frame, bbox, landmarks=None):
+        fake_face = self.swap(frame, bbox)
+
+        if fake_face is None:
+            return None, None
+
+        x1, y1, x2, y2 = map(int, bbox)
+        h_frame, w_frame = frame.shape[:2]
+
+        # bbox 클리핑
+        x1 = max(0, min(x1, w_frame))
+        x2 = max(0, min(x2, w_frame))
+        y1 = max(0, min(y1, h_frame))
+        y2 = max(0, min(y2, h_frame))
+
+        bw = x2 - x1
+        bh = y2 - y1
+
+        if bw <= 0 or bh <= 0:
+            return None, None
+
+        fake_face = cv2.resize(fake_face, (bw, bh))
+
+        result = frame.copy()
+
+        # 얼굴 영역 타원 마스크
+        mask = np.zeros((bh, bw), dtype=np.uint8)
+
+        cv2.ellipse(
+            mask,
+            (bw // 2, bh // 2),
+            (max(1, bw // 2 - 2), max(1, bh // 2 - 2)),
+            0,
+            0,
+            360,
+            255,
+            -1
+        )
+
+        # bbox 크기에 맞춰 blur kernel 자동 조정
+        k = min(
+            21,
+            bw if bw % 2 == 1 else bw - 1,
+            bh if bh % 2 == 1 else bh - 1
+        )
+        k = max(3, k)
+
+        mask_blur = cv2.GaussianBlur(mask, (k, k), 0)
+        mask_3ch = cv2.merge([mask_blur] * 3).astype(np.float32) / 255.0
+
+        roi = result[y1:y2, x1:x2].astype(np.float32)
+
+        blended = (
+            roi * (1 - mask_3ch)
+            + fake_face.astype(np.float32) * mask_3ch
+        )
+
+        result[y1:y2, x1:x2] = blended.astype(np.uint8)
+
+        full_mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+        full_mask[y1:y2, x1:x2] = mask
+
+        return result, full_mask
