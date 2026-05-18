@@ -1,7 +1,5 @@
-#face_stitcher.py
 import cv2
 import numpy as np
-
 
 class FaceStitcher:
 
@@ -13,11 +11,17 @@ class FaceStitcher:
     def _rotate_face(self, face, angle):
         if angle == 0:
             return face
+
         h, w = face.shape[:2]
         M = cv2.getRotationMatrix2D((w // 2, h // 2), angle, 1.0)
-        return cv2.warpAffine(face, M, (w, h),
-                              flags=cv2.INTER_LINEAR,
-                              borderMode=cv2.BORDER_REFLECT)
+
+        return cv2.warpAffine(
+            face,
+            M,
+            (w, h),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_REFLECT
+        )
 
     def stitch(self, frame, fake_face, bbox, angle=0):
         """
@@ -28,8 +32,9 @@ class FaceStitcher:
         """
         if frame is None:
             raise ValueError("frame이 None입니다.")
+
         if fake_face is None:
-            return frame  # swap 실패 시 원본 반환
+            return frame
 
         x1, y1, x2, y2 = map(int, bbox)
         h_frame, w_frame = frame.shape[:2]
@@ -53,17 +58,25 @@ class FaceStitcher:
         # 타원 마스크
         seamless_mask = np.zeros((h, w), dtype=np.uint8)
         axes = (max(1, w // 2 - 2), max(1, h // 2 - 2))
-        
+
         cv2.ellipse(
             seamless_mask,
             (w // 2, h // 2),
-            axes, 0, 0, 360, 255, -1 )
-        
-        seamless_mask_3ch = cv2.merge([seamless_mask] * 3)
+            axes,
+            0,
+            0,
+            360,
+            255,
+            -1
+        )
 
         # 가우시안 블러로 경계 부드럽게
-        mask_blur = cv2.GaussianBlur(seamless_mask,
-                                     (self.blur_kernel, self.blur_kernel), 0)
+        mask_blur = cv2.GaussianBlur(
+            seamless_mask,
+            (self.blur_kernel, self.blur_kernel),
+            0
+        )
+
         mask_3ch = cv2.merge([mask_blur] * 3).astype(np.float32) / 255.0
 
         center = (x1 + w // 2, y1 + h // 2)
@@ -72,7 +85,7 @@ class FaceStitcher:
             result = cv2.seamlessClone(
                 resized_face,
                 frame,
-                seamless_mask_3ch,
+                seamless_mask,
                 center,
                 cv2.NORMAL_CLONE
             )
@@ -80,7 +93,12 @@ class FaceStitcher:
             # fallback: 가우시안 블렌딩
             result = frame.copy()
             roi = result[y1:y2, x1:x2].astype(np.float32)
-            blended = roi * (1 - mask_3ch) + resized_face.astype(np.float32) * mask_3ch
+
+            blended = (
+                roi * (1 - mask_3ch)
+                + resized_face.astype(np.float32) * mask_3ch
+            )
+
             result[y1:y2, x1:x2] = blended.astype(np.uint8)
 
         return result
