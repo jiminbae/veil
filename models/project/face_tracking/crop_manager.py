@@ -11,7 +11,7 @@ from config import (
 from face_utils import clip_bbox
 
 
-# 품질 판단 
+# 품질 판단
 def assess_face_quality(frame, bbox, embedding, crop):
     h, w = frame.shape[:2]
     x1, y1, x2, y2 = map(int, bbox)
@@ -28,23 +28,28 @@ def assess_face_quality(frame, bbox, embedding, crop):
     area = box_w * box_h
     aspect_ratio = max(box_w, box_h) / (min(box_w, box_h) + 1e-6)
 
+    # 얼굴 크기 부족
     if area < LIVEPORTRAIT_MIN_FACE_AREA:
         reasons.append("small_face")
 
+    # 비정상 비율 얼굴
     if aspect_ratio > LIVEPORTRAIT_MAX_ASPECT_RATIO:
         reasons.append("bad_aspect_ratio")
 
-    if embedding is None:
-        reasons.append("embedding_failed")
-
+    # crop 실패
     if crop is None or crop.size == 0:
         reasons.append("crop_failed")
     else:
         crop_h, crop_w = crop.shape[:2]
 
-        if crop_w < LIVEPORTRAIT_MIN_CROP_SIZE or crop_h < LIVEPORTRAIT_MIN_CROP_SIZE:
+        # crop 크기 부족
+        if (
+            crop_w < LIVEPORTRAIT_MIN_CROP_SIZE
+            or crop_h < LIVEPORTRAIT_MIN_CROP_SIZE
+        ):
             reasons.append("small_crop")
 
+    # 프레임 가장자리 얼굴
     if (
         x1 <= EDGE_MARGIN
         or y1 <= EDGE_MARGIN
@@ -78,9 +83,15 @@ def apply_fallback_blur(frame, bbox):
     return frame
 
 
-# 비동기 crop 저장 
-def save_background_crop(crop, stable_face_id, raw_track_id, frame_idx, executor, crop_write_futures):
-
+# 비동기 crop 저장
+def save_background_crop(
+    crop,
+    stable_face_id,
+    raw_track_id,
+    frame_idx,
+    executor,
+    crop_write_futures
+):
     if crop is None or crop.size == 0:
         return None
 
@@ -93,7 +104,13 @@ def save_background_crop(crop, stable_face_id, raw_track_id, frame_idx, executor
     save_dir.mkdir(parents=True, exist_ok=True)
 
     save_path = save_dir / f"frame_{frame_idx:06d}.png"
-    future = executor.submit(cv2.imwrite, str(save_path), crop.copy())
+
+    future = executor.submit(
+        cv2.imwrite,
+        str(save_path),
+        crop.copy()
+    )
+
     crop_write_futures.append((save_path, future))
 
     return str(save_path)
