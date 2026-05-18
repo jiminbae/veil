@@ -1,5 +1,6 @@
 import cv2
 import logging
+from time import perf_counter
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
@@ -22,6 +23,7 @@ from config import (
     LOG_EVERY_N_FRAMES,
     CROP_WRITER_WORKERS,
     ENABLE_FACE_SWAP,
+    FACE_SWAP_BATCH_SIZE,
     device,
 )
 
@@ -67,6 +69,7 @@ def setup_dirs_and_logging():
     logging.info(f"SMOOTH_ALPHA={SMOOTH_ALPHA}")
     logging.info(f"EMBEDDING_REFRESH_INTERVAL={EMBEDDING_REFRESH_INTERVAL}")
     logging.info(f"LOG_EVERY_N_FRAMES={LOG_EVERY_N_FRAMES}")
+    logging.info(f"FACE_SWAP_BATCH_SIZE={FACE_SWAP_BATCH_SIZE}")
 
 
 def load_target_embeddings():
@@ -88,19 +91,14 @@ def load_target_embeddings():
     return target_embeddings
 
 
-def process_track(
+def prepare_track(
     original_frame,
-    render_frame,
     track,
     target_embeddings,
     current_frame_idx,
-    crop_executor,
-    crop_write_futures,
-    swapper=None,
 ):
     x1, y1, x2, y2, raw_track_id = map(int, track[:5])
 
-    # embedding 추출 / 캐시
     emb, embedding_refreshed = get_track_embedding(
         original_frame,
         [x1, y1, x2, y2],
@@ -108,22 +106,14 @@ def process_track(
         current_frame_idx
     )
 
-    stable_face_id = assign_stable_face_id(
-        raw_track_id,
-        emb,
-        current_frame_idx
-    )
-
-    # Target 판별
+    stable_face_id = assign_stable_face_id(raw_track_id, emb, current_frame_idx)
     is_target = False
     target_sim = -1.0
 
     if emb is not None:
         is_target, target_sim = check_target_match(emb, target_embeddings)
-
         if is_target:
             target_track_ids.add(raw_track_id)
-
             if stable_face_id is not None:
                 target_face_ids.add(stable_face_id)
 
@@ -133,54 +123,64 @@ def process_track(
     if raw_track_id in target_track_ids and stable_face_id is not None:
         target_face_ids.add(stable_face_id)
 
-    # bbox smoothing
     if stable_face_id is not None:
-        sx1, sy1, sx2, sy2 = smooth_bbox(
-            stable_face_id,
-            [x1, y1, x2, y2]
-        )
+        sx1, sy1, sx2, sy2 = smooth_bbox(stable_face_id, [x1, y1, x2, y2])
     else:
         sx1, sy1, sx2, sy2 = x1, y1, x2, y2
 
     raw_bbox = [x1, y1, x2, y2]
     smoothed_bbox = [sx1, sy1, sx2, sy2]
-
-    is_target_final = (
-        stable_face_id in target_face_ids
-        if stable_face_id is not None
-        else raw_track_id in target_track_ids
-    )
-
+    is_target_final = stable_face_id in target_face_ids if stable_face_id is not None else raw_track_id in target_track_ids
     is_background = not is_target_final
 
-    # 품질 판단
     raw_crop = crop_with_padding(original_frame, raw_bbox)
     smooth_crop = crop_with_padding(original_frame, smoothed_bbox)
+    quality, fallback_reasons = assess_face_quality(original_frame, raw_bbox, emb, raw_crop)
 
-    quality, fallback_reasons = assess_face_quality(
-        original_frame,
-        raw_bbox,
-        emb,
-        raw_crop
-    )
+    return {
+        "raw_track_id": raw_track_id,
+        "stable_face_id": stable_face_id,
+        "raw_bbox": raw_bbox,
+        "smoothed_bbox": smoothed_bbox,
+        "emb": emb,
+        "embedding_refreshed": embedding_refreshed,
+        "is_target": is_target,
+        "target_sim": target_sim,
+        "is_target_final": is_target_final,
+        "is_background": is_background,
+        "quality": quality,
+        "fallback_reasons": fallback_reasons,
+        "smooth_crop": smooth_crop,
+    }
 
+
+def finalize_track(
+    render_frame,
+    track_ctx,
+    current_frame_idx,
+    crop_executor,
+    crop_write_futures,
+    swap_success=False,
+):
+    raw_track_id = track_ctx["raw_track_id"]
+    stable_face_id = track_ctx["stable_face_id"]
+    raw_bbox = track_ctx["raw_bbox"]
+    smoothed_bbox = track_ctx["smoothed_bbox"]
+    emb = track_ctx["emb"]
+    embedding_refreshed = track_ctx["embedding_refreshed"]
+    is_target = track_ctx["is_target"]
+    target_sim = track_ctx["target_sim"]
+    is_target_final = track_ctx["is_target_final"]
+    is_background = track_ctx["is_background"]
+    quality = track_ctx["quality"]
+    fallback_reasons = track_ctx["fallback_reasons"]
+    smooth_crop = track_ctx["smooth_crop"]
+    x1, y1, x2, y2 = raw_bbox
+    sx1, sy1, sx2, sy2 = smoothed_bbox
     crop_path = None
-    swap_success = False
 
-    # 보호 대상은 원본 유지, 배경 얼굴만 swap 또는 blur
     if is_background:
         if quality == "GOOD":
-            if swapper is not None:
-                swapped_frame, mask = swapper.swap_into_frame(
-                    render_frame,
-                    smoothed_bbox,
-                    landmarks=None
-                )
-
-                if swapped_frame is not None:
-                    render_frame[:] = swapped_frame
-                    swap_success = True
-
             crop_path = save_background_crop(
                 smooth_crop,
                 stable_face_id,
@@ -189,14 +189,11 @@ def process_track(
                 crop_executor,
                 crop_write_futures
             )
-
             if not swap_success:
                 render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
-
         else:
             render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
 
-    # metadata 생성
     face_data = make_face_data(
         frame_idx=current_frame_idx,
         raw_track_id=raw_track_id,
@@ -212,15 +209,9 @@ def process_track(
         crop_path=crop_path
     )
 
-    # 로그 기록
     if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
         target_track_flag = raw_track_id in target_track_ids
-        target_face_flag = (
-            stable_face_id in target_face_ids
-            if stable_face_id is not None
-            else False
-        )
-
+        target_face_flag = stable_face_id in target_face_ids if stable_face_id is not None else False
         logging.info(
             f"Frame={current_frame_idx} "
             f"TrackID={raw_track_id} "
@@ -241,7 +232,6 @@ def process_track(
             f"CropPath={crop_path}"
         )
 
-    # 시각화
     if stable_face_id is not None:
         if is_target_final:
             label = f"TARGET ID {stable_face_id}"
@@ -272,16 +262,7 @@ def process_track(
                 color = (0, 165, 255)
 
     cv2.rectangle(render_frame, (sx1, sy1), (sx2, sy2), color, 2)
-    cv2.putText(
-        render_frame,
-        label,
-        (sx1, max(20, sy1 - 10)),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.7,
-        color,
-        2
-    )
-
+    cv2.putText(render_frame, label, (sx1, max(20, sy1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
     return face_data, render_frame
 
 
@@ -335,39 +316,107 @@ def main():
             if current_frame_idx % 30 == 0:
                 cleanup_old_face_ids(current_frame_idx)
 
+            frame_started = perf_counter()
+            detect_started = perf_counter()
             dets = detect_faces_multiscale(
                 original_frame,
                 detector,
                 device,
                 current_frame_idx
             )
+            detect_elapsed = perf_counter() - detect_started
 
             if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
                 logging.info(
                     f"Frame={current_frame_idx} Detections={len(dets)}"
                 )
 
+            track_started = perf_counter()
             tracks = tracker.update(dets, original_frame)
+            track_elapsed = perf_counter() - track_started
 
             if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
                 logging.info(
                     f"Frame={current_frame_idx} Tracks={len(tracks)}"
                 )
 
-            for track in tracks:
-                face_data, render_frame = process_track(
+            prepare_tracks_started = perf_counter()
+            track_contexts = [
+                prepare_track(
                     original_frame,
-                    render_frame,
                     track,
                     target_embeddings,
                     current_frame_idx,
+                )
+                for track in tracks
+            ]
+            prepare_tracks_elapsed = perf_counter() - prepare_tracks_started
+
+            swap_indices = [
+                idx
+                for idx, ctx in enumerate(track_contexts)
+                if ctx["is_background"] and ctx["quality"] == "GOOD"
+            ]
+            swap_success_by_index = {}
+            swap_elapsed = 0.0
+            swap_timings = {
+                "prepare_sec": 0.0,
+                "inference_sec": 0.0,
+                "paste_sec": 0.0,
+                "total_sec": 0.0,
+            }
+
+            if swapper is not None and swap_indices:
+                swap_bboxes = [track_contexts[idx]["smoothed_bbox"] for idx in swap_indices]
+                swap_started = perf_counter()
+                render_frame, swap_success_flags, _, swap_timings = swapper.swap_many_into_frame(
+                    render_frame,
+                    swap_bboxes,
+                    landmarks_list=[None] * len(swap_bboxes),
+                    batch_size=FACE_SWAP_BATCH_SIZE,
+                )
+                swap_elapsed = perf_counter() - swap_started
+                swap_success_by_index = dict(zip(swap_indices, swap_success_flags))
+
+            if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
+                logging.info(
+                    f"Frame={current_frame_idx} "
+                    f"SwapCandidates={len(swap_indices)} "
+                    f"SwapSuccessCount={sum(swap_success_by_index.values())} "
+                    f"SwapBatchSize={FACE_SWAP_BATCH_SIZE} "
+                    f"SwapElapsedSec={swap_elapsed:.4f} "
+                    f"SwapPrepareSec={swap_timings['prepare_sec']:.4f} "
+                    f"SwapInferenceSec={swap_timings['inference_sec']:.4f} "
+                    f"SwapPasteSec={swap_timings['paste_sec']:.4f}"
+                )
+
+            finalize_started = perf_counter()
+            for idx, track_ctx in enumerate(track_contexts):
+                face_data, render_frame = finalize_track(
+                    render_frame,
+                    track_ctx,
+                    current_frame_idx,
                     crop_executor,
                     crop_write_futures,
-                    swapper
+                    swap_success=swap_success_by_index.get(idx, False),
                 )
                 all_face_metadata.append(face_data)
+            finalize_elapsed = perf_counter() - finalize_started
 
+            write_started = perf_counter()
             out.write(render_frame)
+            write_elapsed = perf_counter() - write_started
+
+            if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
+                logging.info(
+                    f"Frame={current_frame_idx} "
+                    f"DetectSec={detect_elapsed:.4f} "
+                    f"TrackSec={track_elapsed:.4f} "
+                    f"PrepareTracksSec={prepare_tracks_elapsed:.4f} "
+                    f"FinalizeSec={finalize_elapsed:.4f} "
+                    f"WriteSec={write_elapsed:.4f} "
+                    f"FrameTotalSec={perf_counter() - frame_started:.4f}"
+                )
 
             if current_frame_idx % 100 == 0:
                 failed = []

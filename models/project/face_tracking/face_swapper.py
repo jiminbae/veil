@@ -3,6 +3,7 @@
 import cv2
 import numpy as np
 import torch
+from time import perf_counter
 from pathlib import Path
 import sys
 
@@ -40,11 +41,17 @@ class LPProcessor:
             flag_lip_retargeting=False,
             flag_eye_retargeting=False,
             flag_do_rot=True,
+            flag_do_torch_compile=False,
         )
         self.crop_cfg = CropConfig()
 
         device_name = "GPU" if is_cuda else "CPU"
         print(f"[FaceSwapper] Initializing LivePortrait on: {device_name}")
+        print(f"[FaceSwapper] torch.compile enabled: {self.inference_cfg.flag_do_torch_compile}")
+        if is_cuda:
+            gpu_name = torch.cuda.get_device_name(0)
+            total_gb = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
+            print(f"[FaceSwapper] CUDA device: {gpu_name} ({total_gb:.1f} GB)")
 
         self.pipeline = LivePortraitPipeline(
             inference_cfg=self.inference_cfg,
@@ -79,126 +86,240 @@ class LPProcessor:
 
         print("[FaceSwapper] Source features cached (f_s, x_s).")
 
-    def swap_into_frame(self, frame_bgr, bbox, landmarks=None):
-        """
-        프레임의 bbox 얼굴을 source(fake_face)로 swap한 전체 프레임 + 마스크 반환.
-        실패 시 (None, None).
-
-        Parameters
-        ----------
-        frame_bgr : np.ndarray HxWx3 BGR
-        bbox : [x1, y1, x2, y2]
-        landmarks : optional Nx2 array (insightface의 landmark_2d_106 등)
-            제공되면 얼굴 모양 정밀 마스크 사용 (액자 효과 제거).
-            None이면 기본 oval mask + erosion 사용.
-
-        Returns
-        -------
-        result_bgr : np.ndarray HxWx3 uint8
-        mask_ori   : np.ndarray HxWx3 float32 (0~1) — 합성 가중치
-        """
-        if self.f_s is None:
-            raise RuntimeError("set_source()가 호출되지 않음.")
-
+    def _prepare_driving_item(self, frame_bgr, bbox, landmarks=None):
+        """Prepare one face region for batched LivePortrait inference."""
         x1, y1, x2, y2 = map(int, bbox)
         H, W = frame_bgr.shape[:2]
         bw, bh = x2 - x1, y2 - y1
         if bw <= 0 or bh <= 0:
-            return None, None
+            return None
 
-        # LivePortrait cropper가 랜드마크 잡으려면 컨텍스트 여유 필요 (1.0x 패딩)
         pad_w, pad_h = bw, bh
         px1, py1 = max(0, x1 - pad_w), max(0, y1 - pad_h)
         px2, py2 = min(W, x2 + pad_w), min(H, y2 + pad_h)
         face_region_bgr = frame_bgr[py1:py2, px1:px2]
         if face_region_bgr.size == 0:
-            return None, None
+            return None
 
         face_region_rgb = cv2.cvtColor(face_region_bgr, cv2.COLOR_BGR2RGB)
+        crop_info_d = self.cropper.crop_source_image(face_region_rgb, self.crop_cfg)
+        if crop_info_d is None or "img_crop_256x256" not in crop_info_d:
+            return None
 
-        try:
-            # 1. driving 영역에 cropper 적용 → 256x256 crop + M_c2o(역변환 행렬)
-            crop_info_d = self.cropper.crop_source_image(
-                face_region_rgb, self.crop_cfg
-            )
-            if crop_info_d is None or 'img_crop_256x256' not in crop_info_d:
-                return None, None
+        M_c2o_full = crop_info_d["M_c2o"].copy().astype(np.float32)
+        M_c2o_full[0, 2] += px1
+        M_c2o_full[1, 2] += py1
 
-            driving_crop = crop_info_d['img_crop_256x256']
-            M_c2o_local = crop_info_d['M_c2o']  # 3x3, crop -> face_region 좌표계
+        return {
+            "bbox": [x1, y1, x2, y2],
+            "landmarks": landmarks,
+            "driving_crop": crop_info_d["img_crop_256x256"],
+            "M_c2o_full": M_c2o_full,
+        }
 
-            with torch.inference_mode():
-                # 2. driving keypoints (현재 프레임 인물의 표정/포즈)
-                I_d = self.wrapper.prepare_source(driving_crop)
-                x_d_info = self.wrapper.get_kp_info(I_d)
-                x_d = self.wrapper.transform_keypoint(x_d_info)
+    def _get_default_roi(self, frame_shape, bbox, M_c2o_full):
+        h, w = frame_shape[:2]
+        corners = np.array(
+            [[[0, 0], [255, 0], [255, 255], [0, 255]]],
+            dtype=np.float32,
+        )
+        transformed = cv2.transform(corners, M_c2o_full[:2, :])[0]
+        x1, y1 = np.floor(transformed.min(axis=0)).astype(int)
+        x2, y2 = np.ceil(transformed.max(axis=0)).astype(int)
+        bx1, by1, bx2, by2 = bbox
+        face_size = max(bx2 - bx1, by2 - by1)
+        blur_size = max(31, int(face_size * 0.15))
+        blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
+        pad = blur_size + 4
+        return (
+            max(0, x1 - pad),
+            max(0, y1 - pad),
+            min(w, x2 + pad + 1),
+            min(h, y2 + pad + 1),
+        )
 
-                # 3. 🔑 stitching — driving 키포인트를 source 모양에 자연스럽게 맞춤
-                x_d_new = self.wrapper.stitching(self.x_s, x_d)
+    def _paste_back_default_mask_roi(self, img_crop, M_c2o_full, frame_rgb, bbox):
+        rx1, ry1, rx2, ry2 = self._get_default_roi(frame_rgb.shape, bbox, M_c2o_full)
+        if rx2 <= rx1 or ry2 <= ry1:
+            return frame_rgb, None
 
-                # 4. 워핑 + generator (source 외형 + driving 표정)
-                out = self.wrapper.warp_decode(self.f_s, self.x_s, x_d_new)
-                I_p = self.wrapper.parse_output(out['out'])[0]  # 256x256 RGB uint8
+        roi_w, roi_h = rx2 - rx1, ry2 - ry1
+        M_roi = M_c2o_full.copy()
+        M_roi[0, 2] -= rx1
+        M_roi[1, 2] -= ry1
 
-            # 5. M_c2o는 face_region 로컬 좌표계 → 전체 frame 좌표계로 평행이동 보정
-            M_c2o_full = M_c2o_local.copy().astype(np.float32)
-            M_c2o_full[0, 2] += px1
-            M_c2o_full[1, 2] += py1
+        mask_roi = cv2.warpAffine(
+            self.inference_cfg.mask_crop,
+            M_roi[:2, :],
+            dsize=(roi_w, roi_h),
+            flags=cv2.INTER_LINEAR,
+        ).astype(np.float32) / 255.0
 
-            # 6. paste_back 마스크 준비
-            if landmarks is not None and len(landmarks) >= 33:
-                # 🆕 방법 3: landmark 기반 정밀 마스크 (타이트하게)
-                # 얼굴 landmark의 convex hull → 눈/코/입/턱선 영역에만 mask 적용.
-                # 이마 확장 없음! source(fake_face)의 배경/머리카락이 안 들어가게 함.
-                pts = np.asarray(landmarks, dtype=np.int32)
-                hull = cv2.convexHull(pts)
+        bx1, by1, bx2, by2 = bbox
+        face_size = max(bx2 - bx1, by2 - by1)
+        erode_size = max(15, int(face_size * 0.10))
+        erode_size = erode_size if erode_size % 2 == 1 else erode_size + 1
+        blur_size = max(31, int(face_size * 0.15))
+        blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
+        mask_uint8 = (mask_roi * 255).clip(0, 255).astype(np.uint8)
+        kernel = np.ones((erode_size, erode_size), np.uint8)
+        mask_uint8 = cv2.erode(mask_uint8, kernel, iterations=2)
+        mask_uint8 = cv2.GaussianBlur(mask_uint8, (blur_size, blur_size), 0)
+        mask_roi = mask_uint8.astype(np.float32) / 255.0
 
-                custom_mask = np.zeros((H, W), dtype=np.uint8)
-                cv2.fillConvexPoly(custom_mask, hull, 255)
+        result_roi = cv2.warpAffine(
+            img_crop,
+            M_roi[:2, :],
+            dsize=(roi_w, roi_h),
+            flags=cv2.INTER_LINEAR,
+        )
+        frame_roi = frame_rgb[ry1:ry2, rx1:rx2]
+        blended_roi = np.clip(
+            mask_roi * result_roi + (1 - mask_roi) * frame_roi,
+            0,
+            255,
+        ).astype(np.uint8)
+        frame_rgb[ry1:ry2, rx1:rx2] = blended_roi
+        return frame_rgb, mask_roi
 
-                # 살짝 안쪽으로 깎아서 가장자리에 source 배경 안 보이게
-                face_size = max(bw, bh)
-                erode_size = max(7, face_size // 25)
-                erode_size = erode_size if erode_size % 2 == 1 else erode_size + 1
-                custom_mask = cv2.erode(
-                    custom_mask, np.ones((erode_size, erode_size), np.uint8)
-                )
+    def _build_mask(self, frame_shape, bbox, landmarks, M_c2o_full):
+        H, W = frame_shape[:2]
+        x1, y1, x2, y2 = bbox
+        bw, bh = x2 - x1, y2 - y1
 
-                # 가장자리 부드럽게 (얼굴 안→밖 그라데이션)
-                blur_size = max(31, int(face_size * 0.10))
-                blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
-                custom_mask = cv2.GaussianBlur(custom_mask, (blur_size, blur_size), 0)
+        if landmarks is not None and len(landmarks) >= 33:
+            pts = np.asarray(landmarks, dtype=np.int32)
+            hull = cv2.convexHull(pts)
+            custom_mask = np.zeros((H, W), dtype=np.uint8)
+            cv2.fillConvexPoly(custom_mask, hull, 255)
+            face_size = max(bw, bh)
+            erode_size = max(7, face_size // 25)
+            erode_size = erode_size if erode_size % 2 == 1 else erode_size + 1
+            custom_mask = cv2.erode(custom_mask, np.ones((erode_size, erode_size), np.uint8))
+            blur_size = max(31, int(face_size * 0.10))
+            blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
+            custom_mask = cv2.GaussianBlur(custom_mask, (blur_size, blur_size), 0)
+            return np.stack([custom_mask] * 3, axis=-1).astype(np.float32) / 255.0
 
-                mask_ori = np.stack([custom_mask] * 3, axis=-1).astype(np.float32) / 255.0
+        mask_ori = prepare_paste_back(self.inference_cfg.mask_crop, M_c2o_full, dsize=(W, H))
+        face_size = max(bw, bh)
+        erode_size = max(15, int(face_size * 0.10))
+        erode_size = erode_size if erode_size % 2 == 1 else erode_size + 1
+        blur_size = max(31, int(face_size * 0.15))
+        blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
+        mask_uint8 = (mask_ori * 255).clip(0, 255).astype(np.uint8)
+        kernel = np.ones((erode_size, erode_size), np.uint8)
+        mask_uint8 = cv2.erode(mask_uint8, kernel, iterations=2)
+        mask_uint8 = cv2.GaussianBlur(mask_uint8, (blur_size, blur_size), 0)
+        return mask_uint8.astype(np.float32) / 255.0
 
-            else:
-                # 기본 fallback: 정적 oval mask + erosion
-                mask_ori = prepare_paste_back(
-                    self.inference_cfg.mask_crop,
-                    M_c2o_full,
-                    dsize=(W, H),
-                )
-                face_size = max(bw, bh)
-                erode_size = max(15, int(face_size * 0.10))
-                erode_size = erode_size if erode_size % 2 == 1 else erode_size + 1
-                blur_size = max(31, int(face_size * 0.15))
-                blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
-                mask_uint8 = (mask_ori * 255).clip(0, 255).astype(np.uint8)
-                kernel = np.ones((erode_size, erode_size), np.uint8)
-                mask_uint8 = cv2.erode(mask_uint8, kernel, iterations=2)
-                mask_uint8 = cv2.GaussianBlur(mask_uint8, (blur_size, blur_size), 0)
-                mask_ori = mask_uint8.astype(np.float32) / 255.0
+    def _prepare_batch_tensor(self, batch_items):
+        driving_crops = np.stack([item["driving_crop"] for item in batch_items], axis=0)
+        x = driving_crops.astype(np.float32) / 255.0
+        x = np.clip(x, 0, 1)
+        x = torch.from_numpy(x).permute(0, 3, 1, 2)
+        return x.to(self.wrapper.device)
 
-            # 7. 🔑 paste_back — affine 역변환 + 마스크 알파블렌딩
-            frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-            result_rgb = paste_back(I_p, M_c2o_full, frame_rgb, mask_ori)
-            result_bgr = cv2.cvtColor(result_rgb, cv2.COLOR_RGB2BGR)
+    def swap_many_into_frame(self, frame_bgr, bboxes, landmarks_list=None, batch_size=16):
+        """Swap many faces while batching neural-network work on the GPU."""
+        if self.f_s is None:
+            raise RuntimeError("set_source()가 호출되지 않음.")
 
-            return result_bgr, mask_ori
+        total_started = perf_counter()
+        prepare_started = perf_counter()
 
-        except Exception as e:
-            print(f"[FaceSwapper] swap_into_frame error: {e}")
+        if landmarks_list is None:
+            landmarks_list = [None] * len(bboxes)
+
+        prepared = []
+        success_flags = [False] * len(bboxes)
+        masks = [None] * len(bboxes)
+
+        for idx, (bbox, landmarks) in enumerate(zip(bboxes, landmarks_list)):
+            try:
+                item = self._prepare_driving_item(frame_bgr, bbox, landmarks)
+            except Exception as e:
+                print(f"[FaceSwapper] prepare error: {e}")
+                item = None
+            if item is not None:
+                item["index"] = idx
+                prepared.append(item)
+
+        prepare_elapsed = perf_counter() - prepare_started
+        if not prepared:
+            timings = {
+                "prepare_sec": prepare_elapsed,
+                "inference_sec": 0.0,
+                "paste_sec": 0.0,
+                "total_sec": perf_counter() - total_started,
+            }
+            return frame_bgr, success_flags, masks, timings
+
+        result_bgr = frame_bgr.copy()
+        frame_rgb = cv2.cvtColor(result_bgr, cv2.COLOR_BGR2RGB)
+        batch_size = max(1, int(batch_size))
+        inference_elapsed = 0.0
+        paste_elapsed = 0.0
+
+        for start_idx in range(0, len(prepared), batch_size):
+            batch_items = prepared[start_idx:start_idx + batch_size]
+            try:
+                inference_started = perf_counter()
+                with torch.inference_mode():
+                    I_d = self._prepare_batch_tensor(batch_items)
+                    x_d_info = self.wrapper.get_kp_info(I_d)
+                    x_d = self.wrapper.transform_keypoint(x_d_info)
+                    batch_count = len(batch_items)
+                    x_s_batch = self.x_s.expand(batch_count, -1, -1)
+                    f_s_batch = self.f_s.expand(batch_count, -1, -1, -1, -1)
+                    x_d_new = self.wrapper.stitching(x_s_batch, x_d)
+                    out = self.wrapper.warp_decode(f_s_batch, x_s_batch, x_d_new)
+                    outputs = self.wrapper.parse_output(out["out"])
+                inference_elapsed += perf_counter() - inference_started
+
+                paste_started = perf_counter()
+                for item, I_p in zip(batch_items, outputs):
+                    if item["landmarks"] is None:
+                        frame_rgb, mask_ori = self._paste_back_default_mask_roi(
+                            I_p,
+                            item["M_c2o_full"],
+                            frame_rgb,
+                            item["bbox"],
+                        )
+                    else:
+                        mask_ori = self._build_mask(
+                            result_bgr.shape,
+                            item["bbox"],
+                            item["landmarks"],
+                            item["M_c2o_full"],
+                        )
+                        frame_rgb = paste_back(I_p, item["M_c2o_full"], frame_rgb, mask_ori)
+                    idx = item["index"]
+                    success_flags[idx] = True
+                    masks[idx] = mask_ori
+                paste_elapsed += perf_counter() - paste_started
+            except Exception as e:
+                print(f"[FaceSwapper] batch swap error: {e}")
+
+        result_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+        timings = {
+            "prepare_sec": prepare_elapsed,
+            "inference_sec": inference_elapsed,
+            "paste_sec": paste_elapsed,
+            "total_sec": perf_counter() - total_started,
+        }
+        return result_bgr, success_flags, masks, timings
+
+    def swap_into_frame(self, frame_bgr, bbox, landmarks=None):
+        result_bgr, success_flags, masks, _ = self.swap_many_into_frame(
+            frame_bgr,
+            [bbox],
+            [landmarks],
+            batch_size=1,
+        )
+        if not success_flags[0]:
             return None, None
+        return result_bgr, masks[0]
 
 
 class FaceSwapper:
@@ -215,4 +336,12 @@ class FaceSwapper:
         landmarks 제공 시 얼굴 모양 정밀 마스크 사용 (액자 효과 제거).
         """
         return self.processor.swap_into_frame(frame, bbox, landmarks=landmarks)
+
+    def swap_many_into_frame(self, frame, bboxes, landmarks_list=None, batch_size=16):
+        return self.processor.swap_many_into_frame(
+            frame,
+            bboxes,
+            landmarks_list=landmarks_list,
+            batch_size=batch_size,
+        )
 
