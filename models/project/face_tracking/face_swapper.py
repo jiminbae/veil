@@ -9,7 +9,7 @@ import sys
 # C:\Workspace\DL-project\LivePortrait 가 import path에 들어가야 함
 # face_swapper.py 위치: DL-project/models/face_vision/face_swapper.py
 # → .parent.parent.parent = DL-project/
-root_dir = Path(__file__).resolve().parent.parent.parent
+root_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_dir))
 
 from LivePortrait.src.live_portrait_pipeline import LivePortraitPipeline
