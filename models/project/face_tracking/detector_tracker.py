@@ -49,13 +49,6 @@ def init_tracker(device):
     )
 
 
-def normalize_tracker_device(device):
-    if isinstance(device, str) and device.lower() == "cuda":
-        return "0" if torch.cuda.device_count() > 0 else "cpu"
-
-    return device
-
-
 def compute_iou(box, boxes):
     x1 = np.maximum(box[0], boxes[:, 0])
     y1 = np.maximum(box[1], boxes[:, 1])
