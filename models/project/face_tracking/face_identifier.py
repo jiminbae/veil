@@ -13,8 +13,11 @@ from config import (
 )
 from face_utils import l2_normalize, crop_with_padding
 
+
+# Gallery / smoothing 설정
 EMBEDDING_POOL_SIZE = 5
-SMOOTH_RESET_IOU_THRESHOLD = 0.10
+TRACK_REUSE_THRESHOLD_RATIO = 0.85
+SMOOTH_RESET_IOU_THRESHOLD = 0.15
 SMOOTH_RESET_CENTER_DISTANCE_RATIO = 1.5
 
 
@@ -30,6 +33,7 @@ def get_face_analysis_runtime():
     return ["CPUExecutionProvider"], -1
 
 
+# InsightFace 초기화
 FACE_PROVIDERS, FACE_CTX_ID = get_face_analysis_runtime()
 
 face_app = FaceAnalysis(
@@ -40,70 +44,20 @@ face_app = FaceAnalysis(
 face_app.prepare(ctx_id=FACE_CTX_ID, det_size=(640, 640))
 
 
+# 전역 상태
 next_face_id = 1
-face_gallery = {}
-face_last_seen = {}
-track_to_face = {}
-track_last_emb = {}
-bbox_smoother = {}
+
+face_gallery = {}   
+face_last_seen = {}    
+track_to_face = {}    
+track_last_emb = {}  
+bbox_smoother = {}     
 
 target_face_ids = set()
 target_track_ids = set()
 
 
-def cosine_similarity(emb1, emb2):
-    if emb1 is None or emb2 is None:
-        return -1.0
-
-    return float(np.dot(emb1, emb2))
-
-
-def get_gallery_best_similarity(embedding, gallery_embs):
-    if embedding is None or len(gallery_embs) == 0:
-        return -1.0
-
-    sims = [
-        cosine_similarity(embedding, gallery_emb)
-        for gallery_emb in gallery_embs
-    ]
-
-    return max(sims)
-
-
-def update_gallery_embedding(face_id, embedding):
-    if embedding is None:
-        return
-
-    embedding = l2_normalize(embedding)
-
-    if embedding is None:
-        return
-
-    if face_id not in face_gallery:
-        face_gallery[face_id] = [embedding]
-        return
-
-    gallery_embs = face_gallery[face_id]
-
-    if len(gallery_embs) > 0:
-        base_emb = gallery_embs[-1]
-        updated = (
-            SMOOTH_ALPHA * base_emb
-            + (1 - SMOOTH_ALPHA) * embedding
-        )
-        updated = l2_normalize(updated)
-
-        if updated is not None:
-            gallery_embs.append(updated)
-        else:
-            gallery_embs.append(embedding)
-    else:
-        gallery_embs.append(embedding)
-
-    if len(gallery_embs) > EMBEDDING_POOL_SIZE:
-        face_gallery[face_id] = gallery_embs[-EMBEDDING_POOL_SIZE:]
-
-
+# 임베딩 추출
 def get_arcface_embedding(frame, box):
     crop = crop_with_padding(frame, box)
 
@@ -128,6 +82,7 @@ def get_arcface_embedding(frame, box):
     return l2_normalize(emb)
 
 
+# Track embedding 캐시
 def get_track_embedding(frame, box, track_id, current_frame):
     cached_emb = track_last_emb.get(track_id)
 
@@ -149,6 +104,7 @@ def get_track_embedding(frame, box, track_id, current_frame):
     return emb, True
 
 
+# 타겟 이미지 경로 로드
 def get_target_image_paths(target_dir, pattern="target*"):
     image_exts = [".jpg", ".jpeg", ".png", ".bmp", ".webp"]
 
@@ -165,6 +121,7 @@ def get_target_image_paths(target_dir, pattern="target*"):
     return paths
 
 
+# 타겟 이미지 embedding 추출
 def get_target_embedding(image_path):
     image = cv2.imread(image_path)
 
@@ -194,6 +151,7 @@ def get_target_embedding(image_path):
     return emb
 
 
+# 타겟 얼굴 판별
 def check_target_match(embedding, target_embeddings):
     if embedding is None or len(target_embeddings) == 0:
         return False, -1.0
@@ -208,6 +166,35 @@ def check_target_match(embedding, target_embeddings):
     return best_sim >= TARGET_THRESHOLD, best_sim
 
 
+# Gallery similarity 계산
+def get_gallery_best_similarity(embedding, gallery_embeddings):
+    if embedding is None or len(gallery_embeddings) == 0:
+        return -1.0
+
+    sims = [
+        float(np.dot(embedding, gallery_emb))
+        for gallery_emb in gallery_embeddings
+    ]
+
+    return max(sims)
+
+
+# Gallery embedding 업데이트
+def update_gallery_embedding(face_id, embedding):
+    if embedding is None:
+        return
+
+    if face_id not in face_gallery:
+        face_gallery[face_id] = [embedding]
+        return
+
+    face_gallery[face_id].append(embedding)
+
+    if len(face_gallery[face_id]) > EMBEDDING_POOL_SIZE:
+        face_gallery[face_id] = face_gallery[face_id][-EMBEDDING_POOL_SIZE:]
+
+
+# 오래된 Face ID 정리
 def cleanup_old_face_ids(current_frame):
     expired_face_ids = [
         face_id
@@ -228,14 +215,16 @@ def cleanup_old_face_ids(current_frame):
             target_track_ids.discard(track_id)
 
 
+# Stable Face ID 부여
 def assign_stable_face_id(track_id, embedding, current_frame):
     global next_face_id
 
     if embedding is None:
-        embedding = track_last_emb.get(track_id, None)
+        embedding = track_last_emb.get(track_id)
     else:
         track_last_emb[track_id] = embedding
 
+    # 기존 track_id가 이미 stable face_id에 연결된 경우
     if track_id in track_to_face:
         stable_id = track_to_face[track_id]
 
@@ -249,7 +238,7 @@ def assign_stable_face_id(track_id, embedding, current_frame):
                 face_gallery[stable_id]
             )
 
-            if best_sim >= SIM_THRESHOLD * 0.85:
+            if best_sim >= SIM_THRESHOLD * TRACK_REUSE_THRESHOLD_RATIO:
                 update_gallery_embedding(stable_id, embedding)
                 face_last_seen[stable_id] = current_frame
                 return stable_id
@@ -262,11 +251,12 @@ def assign_stable_face_id(track_id, embedding, current_frame):
     if embedding is None:
         return None
 
+    # 전체 gallery에서 가장 비슷한 face_id 검색
     best_id = None
     best_sim = -1.0
 
-    for face_id, gallery_embs in face_gallery.items():
-        sim = get_gallery_best_similarity(embedding, gallery_embs)
+    for face_id, gallery_embeddings in face_gallery.items():
+        sim = get_gallery_best_similarity(embedding, gallery_embeddings)
 
         if sim > best_sim:
             best_sim = sim
@@ -286,6 +276,7 @@ def assign_stable_face_id(track_id, embedding, current_frame):
     return stable_id
 
 
+# bbox IoU 계산
 def compute_single_iou(box1, box2):
     box1 = np.array(box1, dtype=np.float32)
     box2 = np.array(box2, dtype=np.float32)
@@ -308,6 +299,7 @@ def compute_single_iou(box1, box2):
     return float(inter / union)
 
 
+# bbox 중심 거리 계산
 def compute_center_distance(box1, box2):
     box1 = np.array(box1, dtype=np.float32)
     box2 = np.array(box2, dtype=np.float32)
@@ -320,6 +312,7 @@ def compute_center_distance(box1, box2):
     return float(np.sqrt((cx1 - cx2) ** 2 + (cy1 - cy2) ** 2))
 
 
+# bbox 대각선 길이 계산
 def compute_box_diag(box):
     box = np.array(box, dtype=np.float32)
 
@@ -329,6 +322,7 @@ def compute_box_diag(box):
     return float(np.sqrt(w ** 2 + h ** 2))
 
 
+# bbox smoothing
 def smooth_bbox(face_id, bbox, alpha=0.65):
     bbox = np.array(bbox, dtype=np.float32)
 
