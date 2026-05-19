@@ -11,7 +11,7 @@ from config import (
     MAX_FACE_AGE,
     EMBEDDING_REFRESH_INTERVAL,
 )
-from face_utils import l2_normalize, crop_with_padding
+from face_utils import l2_normalize
 
 
 # Gallery / smoothing 설정
@@ -51,7 +51,8 @@ face_gallery = {}
 face_last_seen = {}    
 track_to_face = {}    
 track_last_emb = {}  
-bbox_smoother = {}     
+bbox_smoother = {}
+track_last_kps = {}     
 
 target_face_ids = set()
 target_track_ids = set()
@@ -59,15 +60,32 @@ target_track_ids = set()
 
 # 임베딩 추출
 def get_arcface_embedding(frame, box):
-    crop = crop_with_padding(frame, box)
+    x1, y1, x2, y2 = map(int, box)
+    H, W = frame.shape[:2]
+
+    bw = x2 - x1
+    bh = y2 - y1
+
+    if bw <= 0 or bh <= 0:
+        return None, None
+
+    pad_w = int(bw * 0.25)
+    pad_h = int(bh * 0.25)
+
+    px1 = max(0, x1 - pad_w)
+    py1 = max(0, y1 - pad_h)
+    px2 = min(W, x2 + pad_w)
+    py2 = min(H, y2 + pad_h)
+
+    crop = frame[py1:py2, px1:px2]
 
     if crop is None or crop.size == 0:
-        return None
+        return None, None
 
     faces = face_app.get(crop)
 
     if len(faces) == 0:
-        return None
+        return None, None
 
     best_face = max(
         faces,
@@ -79,12 +97,25 @@ def get_arcface_embedding(frame, box):
     else:
         emb = best_face.embedding
 
-    return l2_normalize(emb)
+    emb = l2_normalize(emb)
+
+    if emb is None:
+        return None, None
+
+    kps = None
+
+    if hasattr(best_face, "kps") and best_face.kps is not None:
+        kps = np.asarray(best_face.kps, dtype=np.float32).copy()
+        kps[:, 0] += px1
+        kps[:, 1] += py1
+
+    return emb, kps
 
 
 # Track embedding 캐시
 def get_track_embedding(frame, box, track_id, current_frame):
     cached_emb = track_last_emb.get(track_id)
+    cached_kps = track_last_kps.get(track_id)
 
     should_refresh = (
         cached_emb is None
@@ -92,16 +123,17 @@ def get_track_embedding(frame, box, track_id, current_frame):
     )
 
     if not should_refresh:
-        return cached_emb, False
+        return cached_emb, cached_kps, False
 
-    emb = get_arcface_embedding(frame, box)
+    emb, kps = get_arcface_embedding(frame, box)
 
     if emb is None:
-        return cached_emb, False
+        return cached_emb, cached_kps, False
 
     track_last_emb[track_id] = emb
+    track_last_kps[track_id] = kps
 
-    return emb, True
+    return emb, kps, True
 
 
 # 타겟 이미지 경로 로드
@@ -212,6 +244,7 @@ def cleanup_old_face_ids(current_frame):
         if face_id in expired_face_ids:
             track_to_face.pop(track_id, None)
             track_last_emb.pop(track_id, None)
+            track_last_kps.pop(track_id, None)
             target_track_ids.discard(track_id)
 
 

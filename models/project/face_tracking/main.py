@@ -104,7 +104,7 @@ def prepare_track(
 ):
     x1, y1, x2, y2, raw_track_id = map(int, track[:5])
 
-    emb, embedding_refreshed = get_track_embedding(
+    emb, target_kps, embedding_refreshed = get_track_embedding(
         original_frame,
         [x1, y1, x2, y2],
         raw_track_id,
@@ -164,6 +164,7 @@ def prepare_track(
         "raw_bbox": raw_bbox,
         "smoothed_bbox": smoothed_bbox,
         "emb": emb,
+        "target_kps": target_kps,
         "embedding_refreshed": embedding_refreshed,
         "is_target": is_target,
         "target_sim": target_sim,
@@ -390,10 +391,14 @@ def main():
             if swapper is not None and swap_indices:
                 swap_bboxes = [track_contexts[idx]["smoothed_bbox"] for idx in swap_indices]
                 swap_started = perf_counter()
+                swap_landmarks = [None] * len(swap_bboxes)
+                swap_target_kps = [track_contexts[idx].get("target_kps") for idx in swap_indices]
+
                 render_frame, swap_success_flags, _, swap_timings = swapper.swap_many_into_frame(
                     render_frame,
                     swap_bboxes,
-                    landmarks_list=[None] * len(swap_bboxes),
+                    landmarks_list=swap_landmarks,
+                    target_kps_list=swap_target_kps,
                     batch_size=FACE_SWAP_BATCH_SIZE,
                 )
                 swap_elapsed = perf_counter() - swap_started

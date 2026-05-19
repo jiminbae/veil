@@ -58,7 +58,6 @@ class LPProcessor:
             raise RuntimeError("source image is None")
 
         image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
-
         crop_info = self.cropper.crop_source_image(image_rgb, self.crop_cfg)
 
         if crop_info is None or "img_crop_256x256" not in crop_info:
@@ -74,7 +73,7 @@ class LPProcessor:
 
         print("[FaceSwapper] Source features cached.")
 
-    def _prepare_driving_item(self, frame_bgr, bbox, landmarks=None):
+    def _prepare_driving_item(self, frame_bgr, bbox, landmarks=None, target_kps=None):
         x1, y1, x2, y2 = map(int, bbox)
         H, W = frame_bgr.shape[:2]
 
@@ -101,7 +100,7 @@ class LPProcessor:
 
         crop_info_d = self.cropper.crop_source_image(
             face_region_rgb,
-            self.crop_cfg
+            self.crop_cfg,
         )
 
         if crop_info_d is None or "img_crop_256x256" not in crop_info_d:
@@ -114,20 +113,16 @@ class LPProcessor:
         return {
             "bbox": [x1, y1, x2, y2],
             "landmarks": landmarks,
+            "target_kps": target_kps,
             "driving_crop": crop_info_d["img_crop_256x256"],
             "M_c2o_full": M_c2o_full,
         }
 
     def _prepare_batch_tensor(self, batch_items):
-        crops = np.stack(
-            [item["driving_crop"] for item in batch_items],
-            axis=0
-        )
-
+        crops = np.stack([item["driving_crop"] for item in batch_items], axis=0)
         x = crops.astype(np.float32) / 255.0
         x = np.clip(x, 0, 1)
         x = torch.from_numpy(x).permute(0, 3, 1, 2)
-
         return x.to(self.wrapper.device)
 
     def _get_default_roi(self, frame_shape, bbox, M_c2o_full):
@@ -162,7 +157,7 @@ class LPProcessor:
         rx1, ry1, rx2, ry2 = self._get_default_roi(
             frame_rgb.shape,
             bbox,
-            M_c2o_full
+            M_c2o_full,
         )
 
         if rx2 <= rx1 or ry2 <= ry1:
@@ -192,7 +187,6 @@ class LPProcessor:
         blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
 
         mask_uint8 = (mask_roi * 255).clip(0, 255).astype(np.uint8)
-
         kernel = np.ones((erode_size, erode_size), np.uint8)
         mask_uint8 = cv2.erode(mask_uint8, kernel, iterations=2)
         mask_uint8 = cv2.GaussianBlur(mask_uint8, (blur_size, blur_size), 0)
@@ -214,10 +208,9 @@ class LPProcessor:
             mask_roi_3ch = mask_roi
 
         blended_roi = np.clip(
-            mask_roi_3ch * result_roi +
-            (1 - mask_roi_3ch) * frame_roi,
+            mask_roi_3ch * result_roi + (1 - mask_roi_3ch) * frame_roi,
             0,
-            255
+            255,
         ).astype(np.uint8)
 
         frame_rgb[ry1:ry2, rx1:rx2] = blended_roi
@@ -245,7 +238,7 @@ class LPProcessor:
         mask = cv2.erode(
             mask,
             np.ones((erode_size, erode_size), np.uint8),
-            iterations=1
+            iterations=1,
         )
 
         blur_size = max(31, int(face_size * 0.10))
@@ -255,7 +248,155 @@ class LPProcessor:
 
         return np.stack([mask] * 3, axis=-1).astype(np.float32) / 255.0
 
-    def swap_many_into_frame(self, frame_bgr, bboxes, landmarks_list=None, batch_size=16):
+    def _try_build_align_transform(self, I_p, target_kps):
+        try:
+            from face_identifier import face_app
+
+            I_p_bgr = cv2.cvtColor(I_p, cv2.COLOR_RGB2BGR)
+            out_faces = face_app.get(I_p_bgr)
+
+            if len(out_faces) == 0:
+                return None
+
+            out_face = max(
+                out_faces,
+                key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]),
+            )
+
+            if not hasattr(out_face, "kps") or out_face.kps is None:
+                return None
+
+            out_kps = np.asarray(out_face.kps, dtype=np.float32)
+            tgt_kps = np.asarray(target_kps, dtype=np.float32)
+
+            if len(out_kps) != 5 or len(tgt_kps) != 5:
+                return None
+
+            M_align, _ = cv2.estimateAffinePartial2D(out_kps, tgt_kps)
+
+            if M_align is None:
+                return None
+
+            return M_align.astype(np.float32)
+
+        except Exception as e:
+            print(f"[FaceSwapper] M_align calculation failed: {e}")
+            return None
+
+    def _paste_with_align(self, I_p, M_align, frame_rgb, bbox, landmarks):
+        H, W = frame_rgb.shape[:2]
+
+        warped_face = cv2.warpAffine(
+            I_p,
+            M_align,
+            (W, H),
+            flags=cv2.INTER_LINEAR,
+            borderMode=cv2.BORDER_CONSTANT,
+            borderValue=0,
+        )
+
+        if landmarks is not None and len(landmarks) >= 5:
+            mask_ori = self._build_landmark_mask(frame_rgb.shape, bbox, landmarks)
+        else:
+            mask_ori = self._build_output_face_mask(I_p, M_align, frame_rgb.shape, bbox)
+
+        m = mask_ori.astype(np.float32)
+
+        if m.ndim == 2:
+            m = m[..., None]
+
+        frame_rgb = np.clip(
+            m * warped_face.astype(np.float32)
+            + (1.0 - m) * frame_rgb.astype(np.float32),
+            0,
+            255,
+        ).astype(np.uint8)
+
+        return frame_rgb, mask_ori
+
+    def _build_output_face_mask(self, I_p, M_align, frame_shape, bbox):
+        H, W = frame_shape[:2]
+        bx1, by1, bx2, by2 = bbox
+        face_size = max(bx2 - bx1, by2 - by1)
+
+        try:
+            from face_identifier import face_app
+
+            I_p_bgr = cv2.cvtColor(I_p, cv2.COLOR_RGB2BGR)
+            out_faces = face_app.get(I_p_bgr)
+
+            if len(out_faces) > 0:
+                out_face = max(
+                    out_faces,
+                    key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]),
+                )
+
+                out_lmk = None
+
+                for attr in ["landmark_2d_106", "landmark_3d_68", "kps"]:
+                    if hasattr(out_face, attr):
+                        val = getattr(out_face, attr)
+
+                        if val is not None:
+                            out_lmk = val[:, :2] if val.shape[-1] == 3 else val
+                            break
+
+                if out_lmk is not None and len(out_lmk) >= 5:
+                    out_h, out_w = I_p.shape[:2]
+                    pts = np.asarray(out_lmk, dtype=np.int32)
+                    hull = cv2.convexHull(pts)
+
+                    erode_size = max(5, face_size // 30)
+                    erode_size = erode_size if erode_size % 2 == 1 else erode_size + 1
+
+                    blur_size = max(21, face_size // 12)
+                    blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
+
+                    mask_out = np.zeros((out_h, out_w), dtype=np.uint8)
+                    cv2.fillConvexPoly(mask_out, hull, 255)
+                    mask_out = cv2.erode(
+                        mask_out,
+                        np.ones((erode_size, erode_size), np.uint8),
+                    )
+                    mask_out = cv2.GaussianBlur(mask_out, (blur_size, blur_size), 0)
+
+                    mask_out_3ch = np.stack([mask_out] * 3, axis=-1)
+
+                    mask_warped = cv2.warpAffine(
+                        mask_out_3ch,
+                        M_align,
+                        (W, H),
+                        flags=cv2.INTER_LINEAR,
+                        borderMode=cv2.BORDER_CONSTANT,
+                        borderValue=0,
+                    )
+
+                    return mask_warped.astype(np.float32) / 255.0
+
+        except Exception as e:
+            print(f"[FaceSwapper] output face mask failed, fallback: {e}")
+
+        mask_fb = np.zeros((H, W), dtype=np.uint8)
+        cx, cy = (bx1 + bx2) // 2, (by1 + by2) // 2
+        rx, ry = max(1, (bx2 - bx1) // 2), max(1, (by2 - by1) // 2)
+
+        cv2.ellipse(mask_fb, (cx, cy), (rx, ry), 0, 0, 360, 255, -1)
+
+        blur_size = max(21, face_size // 8)
+        blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
+
+        mask_fb = cv2.GaussianBlur(mask_fb, (blur_size, blur_size), 0)
+
+        return np.stack([mask_fb] * 3, axis=-1).astype(np.float32) / 255.0
+
+    def swap_many_into_frame(
+        self,
+        frame_bgr,
+        bboxes,
+        landmarks_list=None,
+        target_kps_list=None,
+        batch_size=16,
+    ):
         if self.f_s is None:
             raise RuntimeError("set_source()가 호출되지 않음.")
 
@@ -265,16 +406,22 @@ class LPProcessor:
         if landmarks_list is None:
             landmarks_list = [None] * len(bboxes)
 
+        if target_kps_list is None:
+            target_kps_list = [None] * len(bboxes)
+
         prepared = []
         success_flags = [False] * len(bboxes)
         masks = [None] * len(bboxes)
 
-        for idx, (bbox, landmarks) in enumerate(zip(bboxes, landmarks_list)):
+        for idx, (bbox, landmarks, target_kps) in enumerate(
+            zip(bboxes, landmarks_list, target_kps_list)
+        ):
             try:
                 item = self._prepare_driving_item(
                     frame_bgr,
                     bbox,
-                    landmarks
+                    landmarks,
+                    target_kps=target_kps,
                 )
             except Exception as e:
                 print(f"[FaceSwapper] prepare error: {e}")
@@ -322,7 +469,7 @@ class LPProcessor:
                         -1,
                         -1,
                         -1,
-                        -1
+                        -1,
                     )
 
                     x_d_new = self.wrapper.stitching(x_s_batch, x_d)
@@ -330,41 +477,56 @@ class LPProcessor:
                     out = self.wrapper.warp_decode(
                         f_s_batch,
                         x_s_batch,
-                        x_d_new
+                        x_d_new,
                     )
 
                     outputs = self.wrapper.parse_output(out["out"])
 
                 inference_elapsed += perf_counter() - inference_started
-
                 paste_started = perf_counter()
 
                 for item, I_p in zip(batch_items, outputs):
-                    if item["landmarks"] is not None and len(item["landmarks"]) >= 33:
+                    target_kps = item.get("target_kps")
+                    landmarks = item["landmarks"]
+                    bbox = item["bbox"]
+
+                    M_align = None
+
+                    if target_kps is not None:
+                        M_align = self._try_build_align_transform(I_p, target_kps)
+
+                    if M_align is not None:
+                        frame_rgb, mask_ori = self._paste_with_align(
+                            I_p,
+                            M_align,
+                            frame_rgb,
+                            bbox,
+                            landmarks,
+                        )
+                    elif landmarks is not None and len(landmarks) >= 33:
                         mask_ori = self._build_landmark_mask(
                             frame_rgb.shape,
-                            item["bbox"],
-                            item["landmarks"]
+                            bbox,
+                            landmarks,
                         )
 
                         frame_rgb = paste_back(
                             I_p,
                             item["M_c2o_full"],
                             frame_rgb,
-                            mask_ori
+                            mask_ori,
                         )
-
                     else:
                         frame_rgb, mask_ori = self._paste_back_default_mask_roi(
                             I_p,
                             item["M_c2o_full"],
                             frame_rgb,
-                            item["bbox"]
+                            bbox,
                         )
 
-                    idx = item["index"]
-                    success_flags[idx] = True
-                    masks[idx] = mask_ori
+                    cur_idx = item["index"]
+                    success_flags[cur_idx] = True
+                    masks[cur_idx] = mask_ori
 
                 paste_elapsed += perf_counter() - paste_started
 
@@ -382,11 +544,12 @@ class LPProcessor:
 
         return result_bgr, success_flags, masks, timings
 
-    def swap_into_frame(self, frame_bgr, bbox, landmarks=None):
+    def swap_into_frame(self, frame_bgr, bbox, landmarks=None, target_kps=None):
         result_bgr, success_flags, masks, _ = self.swap_many_into_frame(
             frame_bgr,
             [bbox],
-            [landmarks],
+            landmarks_list=[landmarks],
+            target_kps_list=[target_kps],
             batch_size=1,
         )
 
@@ -407,13 +570,26 @@ class FaceSwapper:
 
         self.processor.set_source(target_img)
 
-    def swap_into_frame(self, frame, bbox, landmarks=None):
-        return self.processor.swap_into_frame(frame, bbox, landmarks=landmarks)
+    def swap_into_frame(self, frame, bbox, landmarks=None, target_kps=None):
+        return self.processor.swap_into_frame(
+            frame,
+            bbox,
+            landmarks=landmarks,
+            target_kps=target_kps,
+        )
 
-    def swap_many_into_frame(self, frame, bboxes, landmarks_list=None, batch_size=16):
+    def swap_many_into_frame(
+        self,
+        frame,
+        bboxes,
+        landmarks_list=None,
+        target_kps_list=None,
+        batch_size=16,
+    ):
         return self.processor.swap_many_into_frame(
             frame,
             bboxes,
             landmarks_list=landmarks_list,
+            target_kps_list=target_kps_list,
             batch_size=batch_size,
         )
