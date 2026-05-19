@@ -19,6 +19,7 @@ from config import (
     SIM_THRESHOLD,
     TARGET_THRESHOLD,
     SMOOTH_ALPHA,
+    TARGET_HOLD_FRAMES,
     EMBEDDING_REFRESH_INTERVAL,
     LOG_EVERY_N_FRAMES,
     CROP_WRITER_WORKERS,
@@ -67,9 +68,13 @@ def setup_dirs_and_logging():
     logging.info(f"SIM_THRESHOLD={SIM_THRESHOLD}")
     logging.info(f"TARGET_THRESHOLD={TARGET_THRESHOLD}")
     logging.info(f"SMOOTH_ALPHA={SMOOTH_ALPHA}")
+    logging.info(f"TARGET_HOLD_FRAMES={TARGET_HOLD_FRAMES}")
     logging.info(f"EMBEDDING_REFRESH_INTERVAL={EMBEDDING_REFRESH_INTERVAL}")
     logging.info(f"LOG_EVERY_N_FRAMES={LOG_EVERY_N_FRAMES}")
     logging.info(f"FACE_SWAP_BATCH_SIZE={FACE_SWAP_BATCH_SIZE}")
+
+
+target_last_seen = {}
 
 
 def load_target_embeddings():
@@ -114,8 +119,11 @@ def prepare_track(
         is_target, target_sim = check_target_match(emb, target_embeddings)
         if is_target:
             target_track_ids.add(raw_track_id)
+            target_last_seen[raw_track_id] = current_frame_idx
+
             if stable_face_id is not None:
                 target_face_ids.add(stable_face_id)
+                target_last_seen[stable_face_id] = current_frame_idx
 
     if stable_face_id in target_face_ids:
         target_track_ids.add(raw_track_id)
@@ -130,7 +138,20 @@ def prepare_track(
 
     raw_bbox = [x1, y1, x2, y2]
     smoothed_bbox = [sx1, sy1, sx2, sy2]
-    is_target_final = stable_face_id in target_face_ids if stable_face_id is not None else raw_track_id in target_track_ids
+    is_target_final = False
+
+    if stable_face_id is not None and stable_face_id in target_face_ids:
+        last_seen = target_last_seen.get(stable_face_id, -999999)
+
+        if current_frame_idx - last_seen <= TARGET_HOLD_FRAMES:
+            is_target_final = True
+
+    if not is_target_final and raw_track_id in target_track_ids:
+        last_seen = target_last_seen.get(raw_track_id, -999999)
+
+        if current_frame_idx - last_seen <= TARGET_HOLD_FRAMES:
+            is_target_final = True
+
     is_background = not is_target_final
 
     raw_crop = crop_with_padding(original_frame, raw_bbox)
