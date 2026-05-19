@@ -7,6 +7,8 @@ from config import (
     LIVEPORTRAIT_MIN_CROP_SIZE,
     LIVEPORTRAIT_MAX_ASPECT_RATIO,
     EDGE_MARGIN,
+    LIVEPORTRAIT_MIN_FACE_SIZE,
+    LIVEPORTRAIT_MAX_FACE_AREA_RATIO,
 )
 from face_utils import clip_bbox
 
@@ -24,9 +26,19 @@ def assess_face_quality(frame, bbox, embedding, crop):
     if box_w <= 0 or box_h <= 0:
         reasons.append("invalid_bbox")
         return "BAD", reasons
+    
+    if embedding is None:
+        reasons.append("embedding_failed")
 
     area = box_w * box_h
     aspect_ratio = max(box_w, box_h) / (min(box_w, box_h) + 1e-6)
+    frame_area = w * h
+
+    if min(box_w, box_h) < LIVEPORTRAIT_MIN_FACE_SIZE:
+        reasons.append("small_face_size")
+
+    if area / frame_area > LIVEPORTRAIT_MAX_FACE_AREA_RATIO:
+        reasons.append("too_large_face")
 
     # 얼굴 크기 부족
     if area < LIVEPORTRAIT_MIN_FACE_AREA:

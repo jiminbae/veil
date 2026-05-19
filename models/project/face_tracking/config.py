@@ -12,10 +12,10 @@ TARGET_DIR = str(BASE_DIR / "target")
 TARGET_PATTERN = "target*"
 TARGET_IMAGE_PATH = str(BASE_DIR / "virtual_face" / "fake_face.jpg")
 
-OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target3.mp4")
-LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target3_log.txt")
-CROP_ROOT = str(BASE_DIR / "outputs/crop/crop3")
-METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata3.json")
+OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target4.mp4")
+LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target4_log.txt")
+CROP_ROOT = str(BASE_DIR / "outputs/crop/crop4")
+METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata4.json")
 
 LIVEPORTRAIT_DIR = str(PROJECT_DIR / "LivePortrait")
 
@@ -54,9 +54,17 @@ USE_BOTSORT_REID = False
 LIVEPORTRAIT_MIN_FACE_AREA = 2500
 LIVEPORTRAIT_MIN_CROP_SIZE = 64
 LIVEPORTRAIT_MAX_ASPECT_RATIO = 2.5
-EDGE_MARGIN = 2
+
+# 너무 작은 얼굴 swap 방지
+LIVEPORTRAIT_MIN_FACE_SIZE = 90
+
+# 화면 전체 가까운 큰 얼굴 swap 방지
+LIVEPORTRAIT_MAX_FACE_AREA_RATIO = 0.12
+
+# 프레임 가장자리 얼굴 swap 방지
+EDGE_MARGIN = 40
 
 # 성능 최적화 설정
 EMBEDDING_REFRESH_INTERVAL = 5
-LOG_EVERY_N_FRAMES = 5
+LOG_EVERY_N_FRAMES = 10
 CROP_WRITER_WORKERS = 2
