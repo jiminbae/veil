@@ -12,8 +12,7 @@ def make_face_data(
     target_sim,
     embedding_ok,
     quality,
-    fallback_reasons,
-    crop_path
+    fallback_reasons
 ):
     return {
         "frame_idx": int(frame_idx),
@@ -26,8 +25,7 @@ def make_face_data(
         "target_similarity": float(target_sim),
         "embedding_ok": bool(embedding_ok),
         "quality": str(quality),
-        "fallback_reasons": list(fallback_reasons),
-        "crop_path": crop_path
+        "fallback_reasons": list(fallback_reasons)
     }
 
 

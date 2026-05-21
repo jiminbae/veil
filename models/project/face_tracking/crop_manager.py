@@ -1,8 +1,6 @@
 import cv2
-from pathlib import Path
 
 from config import (
-    CROP_ROOT,
     LIVEPORTRAIT_MIN_FACE_AREA,
     LIVEPORTRAIT_MIN_CROP_SIZE,
     LIVEPORTRAIT_MAX_ASPECT_RATIO,
@@ -93,36 +91,3 @@ def apply_fallback_blur(frame, bbox):
     frame[y1:y2, x1:x2] = blur
 
     return frame
-
-
-# 비동기 crop 저장
-def save_background_crop(
-    crop,
-    stable_face_id,
-    raw_track_id,
-    frame_idx,
-    executor,
-    crop_write_futures
-):
-    if crop is None or crop.size == 0:
-        return None
-
-    if stable_face_id is not None:
-        person_key = f"face_{stable_face_id}"
-    else:
-        person_key = f"track_{raw_track_id}"
-
-    save_dir = Path(CROP_ROOT) / person_key
-    save_dir.mkdir(parents=True, exist_ok=True)
-
-    save_path = save_dir / f"frame_{frame_idx:06d}.png"
-
-    future = executor.submit(
-        cv2.imwrite,
-        str(save_path),
-        crop.copy()
-    )
-
-    crop_write_futures.append((save_path, future))
-
-    return str(save_path)

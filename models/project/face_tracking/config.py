@@ -14,7 +14,6 @@ TARGET_IMAGE_PATH = str(BASE_DIR / "virtual_face" / "fake_face.jpg")
 
 OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target4.mp4")
 LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target4_log.txt")
-CROP_ROOT = str(BASE_DIR / "outputs/crop/crop4")
 METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata4.json")
 
 LIVEPORTRAIT_DIR = str(PROJECT_DIR / "LivePortrait")
@@ -70,4 +69,3 @@ EDGE_MARGIN = 40
 # 성능 최적화 설정
 EMBEDDING_REFRESH_INTERVAL = 5
 LOG_EVERY_N_FRAMES = 10
-CROP_WRITER_WORKERS = 2

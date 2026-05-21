@@ -2,7 +2,6 @@ import cv2
 import logging
 from time import perf_counter
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor
 
 from face_swapper import FaceSwapper
 
@@ -14,7 +13,6 @@ from config import (
     TARGET_IMAGE_PATH,
     OUTPUT_PATH,
     LOG_PATH,
-    CROP_ROOT,
     METADATA_PATH,
     SIM_THRESHOLD,
     TARGET_THRESHOLD,
@@ -22,7 +20,6 @@ from config import (
     TARGET_HOLD_FRAMES,
     EMBEDDING_REFRESH_INTERVAL,
     LOG_EVERY_N_FRAMES,
-    CROP_WRITER_WORKERS,
     ENABLE_FACE_SWAP,
     FACE_SWAP_BATCH_SIZE,
     device,
@@ -41,14 +38,13 @@ from face_identifier import (
     target_face_ids,
     target_track_ids,
 )
-from crop_manager import assess_face_quality, apply_fallback_blur, save_background_crop
+from crop_manager import assess_face_quality, apply_fallback_blur
 from metadata_manager import make_face_data, save_metadata
 
 
 def setup_dirs_and_logging():
     Path(OUTPUT_PATH).parent.mkdir(parents=True, exist_ok=True)
     Path(LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
-    Path(CROP_ROOT).mkdir(parents=True, exist_ok=True)
     Path(METADATA_PATH).parent.mkdir(parents=True, exist_ok=True)
 
     logging.basicConfig(
@@ -63,7 +59,6 @@ def setup_dirs_and_logging():
     logging.info(f"TARGET_DIR={TARGET_DIR}")
     logging.info(f"TARGET_PATTERN={TARGET_PATTERN}")
     logging.info(f"OUTPUT_PATH={OUTPUT_PATH}")
-    logging.info(f"CROP_ROOT={CROP_ROOT}")
     logging.info(f"METADATA_PATH={METADATA_PATH}")
     logging.info(f"SIM_THRESHOLD={SIM_THRESHOLD}")
     logging.info(f"TARGET_THRESHOLD={TARGET_THRESHOLD}")
@@ -172,7 +167,6 @@ def prepare_track(
         "is_background": is_background,
         "quality": quality,
         "fallback_reasons": fallback_reasons,
-        "smooth_crop": smooth_crop,
     }
 
 
@@ -180,8 +174,6 @@ def finalize_track(
     render_frame,
     track_ctx,
     current_frame_idx,
-    crop_executor,
-    crop_write_futures,
     swap_success=False,
 ):
     raw_track_id = track_ctx["raw_track_id"]
@@ -196,21 +188,10 @@ def finalize_track(
     is_background = track_ctx["is_background"]
     quality = track_ctx["quality"]
     fallback_reasons = track_ctx["fallback_reasons"]
-    smooth_crop = track_ctx["smooth_crop"]
     x1, y1, x2, y2 = raw_bbox
     sx1, sy1, sx2, sy2 = smoothed_bbox
-    crop_path = None
-
     if is_background:
         if quality == "GOOD":
-            crop_path = save_background_crop(
-                smooth_crop,
-                stable_face_id,
-                raw_track_id,
-                current_frame_idx,
-                crop_executor,
-                crop_write_futures
-            )
             if not swap_success:
                 render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
         else:
@@ -227,8 +208,7 @@ def finalize_track(
         target_sim=target_sim,
         embedding_ok=emb is not None,
         quality=quality,
-        fallback_reasons=fallback_reasons,
-        crop_path=crop_path
+        fallback_reasons=fallback_reasons
     )
 
     if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
@@ -250,8 +230,7 @@ def finalize_track(
             f"Background={is_background} "
             f"SwapSuccess={swap_success} "
             f"Quality={quality} "
-            f"FallbackReasons={fallback_reasons} "
-            f"CropPath={crop_path}"
+            f"FallbackReasons={fallback_reasons}"
         )
 
     if stable_face_id is not None:
@@ -321,164 +300,127 @@ def main():
 
     current_frame_idx = 0
     all_face_metadata = []
-    crop_write_futures = []
+    while True:
+        ret, frame = cap.read()
 
-    with ThreadPoolExecutor(max_workers=CROP_WRITER_WORKERS) as crop_executor:
-        while True:
-            ret, frame = cap.read()
+        if not ret:
+            break
 
-            if not ret:
-                break
+        original_frame = frame
+        render_frame = frame.copy()
 
-            original_frame = frame
-            render_frame = frame.copy()
+        current_frame_idx += 1
 
-            current_frame_idx += 1
+        if current_frame_idx % 30 == 0:
+            cleanup_old_face_ids(current_frame_idx)
 
-            if current_frame_idx % 30 == 0:
-                cleanup_old_face_ids(current_frame_idx)
+        frame_started = perf_counter()
+        detect_started = perf_counter()
+        dets = detect_faces_multiscale(
+            original_frame,
+            detector,
+            device,
+            current_frame_idx
+        )
+        detect_elapsed = perf_counter() - detect_started
 
-            frame_started = perf_counter()
-            detect_started = perf_counter()
-            dets = detect_faces_multiscale(
-                original_frame,
-                detector,
-                device,
-                current_frame_idx
+        if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
+            logging.info(
+                f"Frame={current_frame_idx} Detections={len(dets)}"
             )
-            detect_elapsed = perf_counter() - detect_started
 
-            if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
-                logging.info(
-                    f"Frame={current_frame_idx} Detections={len(dets)}"
-                )
+        track_started = perf_counter()
+        tracks = tracker.update(dets, original_frame)
+        track_elapsed = perf_counter() - track_started
 
-            track_started = perf_counter()
-            tracks = tracker.update(dets, original_frame)
-            track_elapsed = perf_counter() - track_started
+        if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
+            logging.info(
+                f"Frame={current_frame_idx} Tracks={len(tracks)}"
+            )
 
-            if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
-                logging.info(
-                    f"Frame={current_frame_idx} Tracks={len(tracks)}"
-                )
+        prepare_tracks_started = perf_counter()
+        track_contexts = [
+            prepare_track(
+                original_frame,
+                track,
+                target_embeddings,
+                current_frame_idx,
+            )
+            for track in tracks
+        ]
+        prepare_tracks_elapsed = perf_counter() - prepare_tracks_started
 
-            prepare_tracks_started = perf_counter()
-            track_contexts = [
-                prepare_track(
-                    original_frame,
-                    track,
-                    target_embeddings,
-                    current_frame_idx,
-                )
-                for track in tracks
-            ]
-            prepare_tracks_elapsed = perf_counter() - prepare_tracks_started
+        swap_indices = [
+            idx
+            for idx, ctx in enumerate(track_contexts)
+            if ctx["is_background"] and ctx["quality"] == "GOOD"
+        ]
+        swap_success_by_index = {}
+        swap_elapsed = 0.0
+        swap_timings = {
+            "prepare_sec": 0.0,
+            "inference_sec": 0.0,
+            "paste_sec": 0.0,
+            "total_sec": 0.0,
+        }
 
-            swap_indices = [
-                idx
-                for idx, ctx in enumerate(track_contexts)
-                if ctx["is_background"] and ctx["quality"] == "GOOD"
-            ]
-            swap_success_by_index = {}
-            swap_elapsed = 0.0
-            swap_timings = {
-                "prepare_sec": 0.0,
-                "inference_sec": 0.0,
-                "paste_sec": 0.0,
-                "total_sec": 0.0,
-            }
+        if swapper is not None and swap_indices:
+            swap_bboxes = [track_contexts[idx]["smoothed_bbox"] for idx in swap_indices]
+            swap_started = perf_counter()
+            swap_landmarks = [None] * len(swap_bboxes)
+            swap_target_kps = [track_contexts[idx].get("target_kps") for idx in swap_indices]
 
-            if swapper is not None and swap_indices:
-                swap_bboxes = [track_contexts[idx]["smoothed_bbox"] for idx in swap_indices]
-                swap_started = perf_counter()
-                swap_landmarks = [None] * len(swap_bboxes)
-                swap_target_kps = [track_contexts[idx].get("target_kps") for idx in swap_indices]
+            render_frame, swap_success_flags, _, swap_timings = swapper.swap_many_into_frame(
+                render_frame,
+                swap_bboxes,
+                landmarks_list=swap_landmarks,
+                target_kps_list=swap_target_kps,
+                batch_size=FACE_SWAP_BATCH_SIZE,
+            )
+            swap_elapsed = perf_counter() - swap_started
+            swap_success_by_index = dict(zip(swap_indices, swap_success_flags))
 
-                render_frame, swap_success_flags, _, swap_timings = swapper.swap_many_into_frame(
-                    render_frame,
-                    swap_bboxes,
-                    landmarks_list=swap_landmarks,
-                    target_kps_list=swap_target_kps,
-                    batch_size=FACE_SWAP_BATCH_SIZE,
-                )
-                swap_elapsed = perf_counter() - swap_started
-                swap_success_by_index = dict(zip(swap_indices, swap_success_flags))
+        if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
+            logging.info(
+                f"Frame={current_frame_idx} "
+                f"SwapCandidates={len(swap_indices)} "
+                f"SwapSuccessCount={sum(swap_success_by_index.values())} "
+                f"SwapBatchSize={FACE_SWAP_BATCH_SIZE} "
+                f"SwapElapsedSec={swap_elapsed:.4f} "
+                f"SwapPrepareSec={swap_timings['prepare_sec']:.4f} "
+                f"SwapInferenceSec={swap_timings['inference_sec']:.4f} "
+                f"SwapPasteSec={swap_timings['paste_sec']:.4f}"
+            )
 
-            if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
-                logging.info(
-                    f"Frame={current_frame_idx} "
-                    f"SwapCandidates={len(swap_indices)} "
-                    f"SwapSuccessCount={sum(swap_success_by_index.values())} "
-                    f"SwapBatchSize={FACE_SWAP_BATCH_SIZE} "
-                    f"SwapElapsedSec={swap_elapsed:.4f} "
-                    f"SwapPrepareSec={swap_timings['prepare_sec']:.4f} "
-                    f"SwapInferenceSec={swap_timings['inference_sec']:.4f} "
-                    f"SwapPasteSec={swap_timings['paste_sec']:.4f}"
-                )
+        finalize_started = perf_counter()
+        for idx, track_ctx in enumerate(track_contexts):
+            face_data, render_frame = finalize_track(
+                render_frame,
+                track_ctx,
+                current_frame_idx,
+                swap_success=swap_success_by_index.get(idx, False),
+            )
+            all_face_metadata.append(face_data)
+        finalize_elapsed = perf_counter() - finalize_started
 
-            finalize_started = perf_counter()
-            for idx, track_ctx in enumerate(track_contexts):
-                face_data, render_frame = finalize_track(
-                    render_frame,
-                    track_ctx,
-                    current_frame_idx,
-                    crop_executor,
-                    crop_write_futures,
-                    swap_success=swap_success_by_index.get(idx, False),
-                )
-                all_face_metadata.append(face_data)
-            finalize_elapsed = perf_counter() - finalize_started
+        write_started = perf_counter()
+        out.write(render_frame)
+        write_elapsed = perf_counter() - write_started
 
-            write_started = perf_counter()
-            out.write(render_frame)
-            write_elapsed = perf_counter() - write_started
-
-            if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
-                logging.info(
-                    f"Frame={current_frame_idx} "
-                    f"DetectSec={detect_elapsed:.4f} "
-                    f"TrackSec={track_elapsed:.4f} "
-                    f"PrepareTracksSec={prepare_tracks_elapsed:.4f} "
-                    f"FinalizeSec={finalize_elapsed:.4f} "
-                    f"WriteSec={write_elapsed:.4f} "
-                    f"FrameTotalSec={perf_counter() - frame_started:.4f}"
-                )
-
-            if current_frame_idx % 100 == 0:
-                failed = []
-                still_running = []
-
-                for save_path, future in crop_write_futures:
-                    if future.done():
-                        try:
-                            if not future.result():
-                                failed.append(str(save_path))
-                        except Exception as e:
-                            failed.append(f"{save_path}: {e}")
-                    else:
-                        still_running.append((save_path, future))
-
-                if failed:
-                    logging.warning(f"Failed crop writes (frame {current_frame_idx}): {failed}")
-
-                crop_write_futures = still_running
+        if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
+            logging.info(
+                f"Frame={current_frame_idx} "
+                f"DetectSec={detect_elapsed:.4f} "
+                f"TrackSec={track_elapsed:.4f} "
+                f"PrepareTracksSec={prepare_tracks_elapsed:.4f} "
+                f"FinalizeSec={finalize_elapsed:.4f} "
+                f"WriteSec={write_elapsed:.4f} "
+                f"FrameTotalSec={perf_counter() - frame_started:.4f}"
+            )
 
     cap.release()
     out.release()
     cv2.destroyAllWindows()
-
-    # 비동기 crop 저장 결과 확인
-    failed_crop_writes = []
-
-    for save_path, future in crop_write_futures:
-        try:
-            if not future.result():
-                failed_crop_writes.append(str(save_path))
-        except Exception as e:
-            failed_crop_writes.append(f"{save_path}: {e}")
-
-    if failed_crop_writes:
-        logging.warning(f"Failed crop writes: {failed_crop_writes[:20]}")
 
     save_metadata(METADATA_PATH, all_face_metadata)
 
@@ -486,12 +428,10 @@ def main():
     logging.info(f"Saved result to: {OUTPUT_PATH}")
     logging.info(f"Saved log to: {LOG_PATH}")
     logging.info(f"Saved metadata to: {METADATA_PATH}")
-    logging.info(f"Saved background crops to: {CROP_ROOT}")
 
     print(f"Saved result to: {OUTPUT_PATH}")
     print(f"Saved log to: {LOG_PATH}")
     print(f"Saved metadata to: {METADATA_PATH}")
-    print(f"Saved background crops to: {CROP_ROOT}")
 
 
 if __name__ == "__main__":
