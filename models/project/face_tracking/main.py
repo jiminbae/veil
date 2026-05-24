@@ -180,11 +180,11 @@ def prepare_track(
         is_target, target_sim = check_target_match(emb, target_embeddings)
         if is_target:
             target_track_ids.add(raw_track_id)
-            target_last_seen[raw_track_id] = current_frame_idx
+            target_last_seen[f"track_{raw_track_id}"] = current_frame_idx
 
             if stable_face_id is not None:
                 target_face_ids.add(stable_face_id)
-                target_last_seen[stable_face_id] = current_frame_idx
+                target_last_seen[f"face_{stable_face_id}"] = current_frame_idx
 
     if stable_face_id in target_face_ids:
         target_track_ids.add(raw_track_id)
@@ -202,13 +202,13 @@ def prepare_track(
     is_target_final = False
 
     if stable_face_id is not None and stable_face_id in target_face_ids:
-        last_seen = target_last_seen.get(stable_face_id, -999999)
+        last_seen = target_last_seen.get(f"face_{stable_face_id}", -999999)
 
         if current_frame_idx - last_seen <= TARGET_HOLD_FRAMES:
             is_target_final = True
 
     if not is_target_final and raw_track_id in target_track_ids:
-        last_seen = target_last_seen.get(raw_track_id, -999999)
+        last_seen = target_last_seen.get(f"track_{raw_track_id}", -999999)
 
         if current_frame_idx - last_seen <= TARGET_HOLD_FRAMES:
             is_target_final = True
@@ -421,6 +421,9 @@ def main():
     H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     out = cv2.VideoWriter(OUTPUT_PATH, fourcc, fps, (W, H))
+
+    if not out.isOpened():
+        raise RuntimeError(f"Cannot open VideoWriter: {OUTPUT_PATH}")
 
     current_frame_idx = 0
     all_face_metadata = []
