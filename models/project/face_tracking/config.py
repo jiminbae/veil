@@ -12,10 +12,10 @@ TARGET_DIR = str(BASE_DIR / "target")
 TARGET_PATTERN = "target*"
 TARGET_IMAGE_PATH = str(BASE_DIR / "virtual_face" / "fake_face.jpg")
 
-OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target4.mp4")
-LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target4_log.txt")
-METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata4.json")
-
+OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target5.mp4")
+LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target5_log.txt")
+METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata5.json")
+CROP_ROOT = str(BASE_DIR / "outputs/crop/crop5")
 LIVEPORTRAIT_DIR = str(PROJECT_DIR / "LivePortrait")
 
 ENABLE_FACE_SWAP = True
@@ -69,3 +69,9 @@ EDGE_MARGIN = 40
 # 성능 최적화 설정
 EMBEDDING_REFRESH_INTERVAL = 5
 LOG_EVERY_N_FRAMES = 10
+
+# crop 저장 worker 수
+CROP_WRITER_WORKERS = 2
+
+# swap flicker 방지
+SWAP_HOLD_FRAMES = 8

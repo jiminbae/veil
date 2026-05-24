@@ -1,3 +1,4 @@
+# face_swapper.py
 import cv2
 import numpy as np
 import torch
@@ -83,8 +84,8 @@ class LPProcessor:
         if bw <= 0 or bh <= 0:
             return None
 
-        pad_w = int(bw * 0.45)
-        pad_h = int(bh * 0.45)
+        pad_w = int(bw * 0.70)
+        pad_h = int(bh * 0.60)
 
         px1 = max(0, x1 - pad_w)
         py1 = max(0, y1 - pad_h)
@@ -219,29 +220,78 @@ class LPProcessor:
 
     def _build_landmark_mask(self, frame_shape, bbox, landmarks):
         H, W = frame_shape[:2]
-        x1, y1, x2, y2 = bbox
+        x1, y1, x2, y2 = map(int, bbox)
 
         bw = x2 - x1
         bh = y2 - y1
 
-        pts = np.asarray(landmarks, dtype=np.int32)
-        hull = cv2.convexHull(pts)
-
-        mask = np.zeros((H, W), dtype=np.uint8)
-        cv2.fillConvexPoly(mask, hull, 255)
+        if bw <= 0 or bh <= 0:
+            return np.zeros((H, W, 3), dtype=np.float32)
 
         face_size = max(bw, bh)
 
-        erode_size = max(7, face_size // 25)
-        erode_size = erode_size if erode_size % 2 == 1 else erode_size + 1
+        mask = np.zeros((H, W), dtype=np.uint8)
+        pts = np.asarray(landmarks, dtype=np.float32)
 
-        mask = cv2.erode(
-            mask,
-            np.ones((erode_size, erode_size), np.uint8),
-            iterations=1,
-        )
+        if pts.ndim != 2 or pts.shape[0] < 5:
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
+            rx = max(1, int(bw * 0.45))
+            ry = max(1, int(bh * 0.52))
 
-        blur_size = max(31, int(face_size * 0.10))
+            cv2.ellipse(mask, (cx, cy), (rx, ry), 0, 0, 360, 255, -1)
+
+        else:
+            pts = pts[:, :2]
+
+            cx = int(np.mean(pts[:, 0]))
+            cy = int(np.mean(pts[:, 1]))
+
+            rx = max(1, int(bw * 0.45))
+            ry = max(1, int(bh * 0.52))
+
+            cv2.ellipse(
+                mask,
+                (cx, cy),
+                (rx, ry),
+                0,
+                0,
+                360,
+                255,
+                -1,
+            )
+
+            hull_pts = pts.astype(np.int32)
+            hull = cv2.convexHull(hull_pts)
+
+            landmark_mask = np.zeros((H, W), dtype=np.uint8)
+            cv2.fillConvexPoly(landmark_mask, hull, 255)
+
+            dilate_size = max(25, int(face_size * 0.18))
+            dilate_size = dilate_size if dilate_size % 2 == 1 else dilate_size + 1
+
+            landmark_mask = cv2.dilate(
+                landmark_mask,
+                np.ones((dilate_size, dilate_size), np.uint8),
+                iterations=2,
+            )
+
+            mask = cv2.bitwise_or(mask, landmark_mask)
+
+        bbox_limit = np.zeros((H, W), dtype=np.uint8)
+
+        margin_x = int(bw * 0.12)
+        margin_y = int(bh * 0.12)
+
+        lx1 = max(0, x1 - margin_x)
+        ly1 = max(0, y1 - margin_y)
+        lx2 = min(W, x2 + margin_x)
+        ly2 = min(H, y2 + margin_y)
+
+        bbox_limit[ly1:ly2, lx1:lx2] = 255
+        mask = cv2.bitwise_and(mask, bbox_limit)
+
+        blur_size = max(31, int(face_size * 0.12))
         blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
 
         mask = cv2.GaussianBlur(mask, (blur_size, blur_size), 0)
@@ -269,10 +319,14 @@ class LPProcessor:
             out_kps = np.asarray(out_face.kps, dtype=np.float32)
             tgt_kps = np.asarray(target_kps, dtype=np.float32)
 
-            if len(out_kps) != 5 or len(tgt_kps) != 5:
+            if out_kps.shape[0] != 5 or tgt_kps.shape[0] != 5:
                 return None
 
-            M_align, _ = cv2.estimateAffinePartial2D(out_kps, tgt_kps)
+            M_align, _ = cv2.estimateAffinePartial2D(
+                out_kps,
+                tgt_kps,
+                method=cv2.LMEDS,
+            )
 
             if M_align is None:
                 return None
@@ -295,7 +349,7 @@ class LPProcessor:
             borderValue=0,
         )
 
-        if landmarks is not None and len(landmarks) >= 5:
+        if landmarks is not None:
             mask_ori = self._build_landmark_mask(frame_rgb.shape, bbox, landmarks)
         else:
             mask_ori = self._build_output_face_mask(I_p, M_align, frame_rgb.shape, bbox)
@@ -316,7 +370,7 @@ class LPProcessor:
 
     def _build_output_face_mask(self, I_p, M_align, frame_shape, bbox):
         H, W = frame_shape[:2]
-        bx1, by1, bx2, by2 = bbox
+        bx1, by1, bx2, by2 = map(int, bbox)
         face_size = max(bx2 - bx1, by2 - by1)
 
         try:
@@ -338,6 +392,7 @@ class LPProcessor:
                         val = getattr(out_face, attr)
 
                         if val is not None:
+                            val = np.asarray(val)
                             out_lmk = val[:, :2] if val.shape[-1] == 3 else val
                             break
 
@@ -420,7 +475,7 @@ class LPProcessor:
                 item = self._prepare_driving_item(
                     frame_bgr,
                     bbox,
-                    landmarks,
+                    landmarks=landmarks,
                     target_kps=target_kps,
                 )
             except Exception as e:
@@ -487,7 +542,7 @@ class LPProcessor:
 
                 for item, I_p in zip(batch_items, outputs):
                     target_kps = item.get("target_kps")
-                    landmarks = item["landmarks"]
+                    landmarks = item.get("landmarks")
                     bbox = item["bbox"]
 
                     M_align = None
@@ -501,9 +556,10 @@ class LPProcessor:
                             M_align,
                             frame_rgb,
                             bbox,
-                            landmarks,
+                            target_kps,
                         )
-                    elif landmarks is not None and len(landmarks) >= 33:
+
+                    elif landmarks is not None and len(landmarks) >= 5:
                         mask_ori = self._build_landmark_mask(
                             frame_rgb.shape,
                             bbox,
@@ -516,6 +572,7 @@ class LPProcessor:
                             frame_rgb,
                             mask_ori,
                         )
+
                     else:
                         frame_rgb, mask_ori = self._paste_back_default_mask_roi(
                             I_p,

@@ -91,3 +91,30 @@ def apply_fallback_blur(frame, bbox):
     frame[y1:y2, x1:x2] = blur
 
     return frame
+
+# background crop 비동기 저장
+def save_background_crop(
+    crop,
+    stable_face_id,
+    raw_track_id,
+    current_frame_idx,
+    crop_executor,
+    crop_write_futures,
+):
+    if crop is None or crop.size == 0:
+        return None
+
+    from pathlib import Path
+    from config import CROP_ROOT
+
+    face_id = stable_face_id if stable_face_id is not None else f"track_{raw_track_id}"
+
+    save_dir = Path(CROP_ROOT) / str(face_id)
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    save_path = save_dir / f"frame_{current_frame_idx:06d}.jpg"
+
+    future = crop_executor.submit(cv2.imwrite, str(save_path), crop)
+    crop_write_futures.append((save_path, future))
+
+    return str(save_path)
