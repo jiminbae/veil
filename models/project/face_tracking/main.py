@@ -297,21 +297,21 @@ def finalize_track(
 
     if is_background:
         if quality == "GOOD":
-            if smooth_crop is not None:
-                crop_path = save_background_crop(
-                    smooth_crop,
-                    stable_face_id,
-                    raw_track_id,
-                    current_frame_idx,
-                    crop_executor,
-                    crop_write_futures
-                )
-            else:
-                logging.warning(
-                    f"Frame={current_frame_idx} "
-                    f"TrackID={raw_track_id} "
-                    "Quality=GOOD but smooth_crop is None"
-                )
+            # if smooth_crop is not None:
+            #     crop_path = save_background_crop(
+            #         smooth_crop,
+            #         stable_face_id,
+            #         raw_track_id,
+            #         current_frame_idx,
+            #         crop_executor,
+            #         crop_write_futures
+            #     )
+            # else:
+            #     logging.warning(
+            #         f"Frame={current_frame_idx} "
+            #         f"TrackID={raw_track_id} "
+            #         "Quality=GOOD but smooth_crop is None"
+            #     )
 
             if not swap_success:
                 render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
@@ -658,13 +658,13 @@ def main():
     logging.info(f"Saved log to: {LOG_PATH}")
     logging.info(f"Saved face metadata to: {METADATA_PATH}")
     logging.info(f"Saved tracking metadata to: {tracking_metadata_path}")
-    logging.info(f"Saved background crops to: {CROP_ROOT}")
+    #logging.info(f"Saved background crops to: {CROP_ROOT}")
 
     print(f"Saved result to: {OUTPUT_PATH}")
     print(f"Saved log to: {LOG_PATH}")
     print(f"Saved face metadata to: {METADATA_PATH}")
     print(f"Saved tracking metadata to: {tracking_metadata_path}")
-    print(f"Saved background crops to: {CROP_ROOT}")
+    #print(f"Saved background crops to: {CROP_ROOT}")
 
 
 if __name__ == "__main__":
