@@ -32,7 +32,7 @@ from config import (
 )
 
 from detector_tracker import init_detector, init_tracker, detect_faces_multiscale
-from face_utils import crop_with_padding
+from face_utils import crop_with_padding, clip_bbox
 from face_identifier import (
     get_target_image_paths,
     get_target_embedding,
@@ -80,7 +80,7 @@ def setup_dirs_and_logging():
 
 target_last_seen = {}
 
-swapped_face_last_seen = {}
+swap_patch_cache = {}
 
 
 def cleanup_target_last_seen(current_frame_idx):
@@ -99,6 +99,43 @@ def cleanup_target_last_seen(current_frame_idx):
             f"CleanedTargetLastSeen={len(stale_keys)} "
             f"RemainingTargetLastSeen={len(target_last_seen)}"
         )
+
+
+def get_swap_key(track_ctx):
+    return f"track_{track_ctx['raw_track_id']}"
+
+
+def paste_cached_swap(render_frame, track_ctx, current_frame_idx):
+    swap_key = get_swap_key(track_ctx)
+    cached = swap_patch_cache.get(swap_key)
+
+    if cached is None:
+        return render_frame, False
+
+    if current_frame_idx - cached["frame_idx"] > SWAP_HOLD_FRAMES:
+        return render_frame, False
+
+    clipped = clip_bbox(render_frame, track_ctx["smoothed_bbox"])
+
+    if clipped is None:
+        return render_frame, False
+
+    x1, y1, x2, y2 = clipped
+    target_w = x2 - x1
+    target_h = y2 - y1
+
+    if target_w <= 0 or target_h <= 0:
+        return render_frame, False
+
+    cached_patch = cached["patch"]
+
+    if cached_patch is None or cached_patch.size == 0:
+        return render_frame, False
+
+    resized_patch = cv2.resize(cached_patch, (target_w, target_h))
+    render_frame[y1:y2, x1:x2] = resized_patch
+
+    return render_frame, True
 
 
 def load_target_embeddings():
@@ -279,7 +316,8 @@ def finalize_track(
             if not swap_success:
                 render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
         else:
-            render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
+            if not swap_success:
+                render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
 
     face_data = make_face_metadata(
         current_frame_idx=current_frame_idx,
@@ -494,6 +532,30 @@ def main():
                 swap_elapsed = perf_counter() - swap_started
                 swap_success_by_index = dict(zip(swap_indices, swap_success_flags))
 
+                for idx, success in swap_success_by_index.items():
+                    if not success:
+                        continue
+
+                    track_ctx = track_contexts[idx]
+                    swap_key = get_swap_key(track_ctx)
+
+                    clipped = clip_bbox(render_frame, track_ctx["smoothed_bbox"])
+
+                    if clipped is None:
+                        continue
+
+                    x1, y1, x2, y2 = clipped
+                    patch = render_frame[y1:y2, x1:x2].copy()
+
+                    if patch.size == 0:
+                        continue
+
+                    swap_patch_cache[swap_key] = {
+                        "patch": patch,
+                        "bbox": [x1, y1, x2, y2],
+                        "frame_idx": current_frame_idx,
+                    }
+
 
             if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
                 logging.info(
@@ -510,6 +572,16 @@ def main():
             finalize_started = perf_counter()
             for idx, track_ctx in enumerate(track_contexts):
                 swap_success = swap_success_by_index.get(idx, False)
+
+                if not swap_success and track_ctx["is_background"]:
+                    render_frame, cache_success = paste_cached_swap(
+                        render_frame,
+                        track_ctx,
+                        current_frame_idx,
+                    )
+
+                    if cache_success:
+                        swap_success = True
 
                 face_data, render_frame = finalize_track(
                     render_frame,
