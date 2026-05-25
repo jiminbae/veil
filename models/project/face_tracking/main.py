@@ -5,8 +5,7 @@ from time import perf_counter
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
-from face_swapper import FaceSwapper
-
+from face_swapper import FaceSwapper, blend_face
 
 from config import (
     VIDEO_PATH,
@@ -47,7 +46,6 @@ from face_identifier import (
 from crop_manager import assess_face_quality, apply_fallback_blur, save_background_crop
 from metadata_manager import make_face_data, save_metadata
 
-
 def setup_dirs_and_logging():
     Path(OUTPUT_PATH).parent.mkdir(parents=True, exist_ok=True)
     Path(LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
@@ -77,11 +75,9 @@ def setup_dirs_and_logging():
     logging.info(f"FACE_SWAP_BATCH_SIZE={FACE_SWAP_BATCH_SIZE}")
     logging.info(f"SWAP_HOLD_FRAMES={SWAP_HOLD_FRAMES}")
 
-
 target_last_seen = {}
 
 swap_patch_cache = {}
-
 
 def cleanup_target_last_seen(current_frame_idx):
     stale_keys = [
@@ -100,10 +96,8 @@ def cleanup_target_last_seen(current_frame_idx):
             f"RemainingTargetLastSeen={len(target_last_seen)}"
         )
 
-
 def get_swap_key(track_ctx):
     return f"track_{track_ctx['raw_track_id']}"
-
 
 def paste_cached_swap(render_frame, track_ctx, current_frame_idx):
     swap_key = get_swap_key(track_ctx)
@@ -132,11 +126,9 @@ def paste_cached_swap(render_frame, track_ctx, current_frame_idx):
     if cached_patch is None or cached_patch.size == 0:
         return render_frame, False
 
-    resized_patch = cv2.resize(cached_patch, (target_w, target_h))
-    render_frame[y1:y2, x1:x2] = resized_patch
+    render_frame = blend_face(render_frame, cached_patch, [x1, y1, x2, y2])
 
     return render_frame, True
-
 
 def load_target_embeddings():
     target_paths = get_target_image_paths(TARGET_DIR, TARGET_PATTERN)
@@ -155,7 +147,6 @@ def load_target_embeddings():
 
     logging.info(f"Total target embeddings loaded: {len(target_embeddings)}")
     return target_embeddings
-
 
 def prepare_track(
     original_frame,
@@ -239,7 +230,6 @@ def prepare_track(
         "smooth_crop": smooth_crop,
     }
 
-
 def make_face_metadata(
     current_frame_idx,
     raw_track_id,
@@ -268,7 +258,6 @@ def make_face_metadata(
         fallback_reasons=fallback_reasons,
         crop_path=crop_path,
     )
-
 
 def finalize_track(
     render_frame,
@@ -389,7 +378,6 @@ def finalize_track(
     cv2.rectangle(render_frame, (sx1, sy1), (sx2, sy2), color, 2)
     cv2.putText(render_frame, label, (sx1, max(20, sy1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
     return face_data, render_frame
-
 
 def main():
     setup_dirs_and_logging()
@@ -513,22 +501,19 @@ def main():
                     for idx in swap_indices
                 ]
 
-                swap_landmarks = [
+                track_kps_list = [
                     track_contexts[idx].get("target_kps")
                     for idx in swap_indices
                 ]
 
-                swap_target_kps = [
-                    track_contexts[idx].get("target_kps")
-                    for idx in swap_indices
-                ]
+                swap_target_kps = [None for _ in swap_indices]
                 
                 swap_started = perf_counter()
 
                 render_frame, swap_success_flags, _, swap_timings = swapper.swap_many_into_frame(
                     render_frame,
                     swap_bboxes,
-                    landmarks_list=swap_landmarks,
+                    landmarks_list=track_kps_list,
                     target_kps_list=swap_target_kps,
                     batch_size=FACE_SWAP_BATCH_SIZE,
                 )
@@ -559,7 +544,6 @@ def main():
                         "frame_idx": current_frame_idx,
                     }
 
-
             if current_frame_idx % LOG_EVERY_N_FRAMES == 0:
                 logging.info(
                     f"Frame={current_frame_idx} "
@@ -576,7 +560,11 @@ def main():
             for idx, track_ctx in enumerate(track_contexts):
                 swap_success = swap_success_by_index.get(idx, False)
 
-                if not swap_success and track_ctx["is_background"]:
+                if (
+                    not swap_success
+                    and track_ctx["is_background"]
+                    and track_ctx["quality"] == "GOOD"
+                ):
                     render_frame, cache_success = paste_cached_swap(
                         render_frame,
                         track_ctx,
@@ -665,7 +653,6 @@ def main():
     print(f"Saved face metadata to: {METADATA_PATH}")
     print(f"Saved tracking metadata to: {tracking_metadata_path}")
     #print(f"Saved background crops to: {CROP_ROOT}")
-
 
 if __name__ == "__main__":
     main()

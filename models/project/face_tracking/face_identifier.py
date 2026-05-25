@@ -8,6 +8,8 @@ from config import (
     TARGET_THRESHOLD,
     SIM_THRESHOLD,
     SMOOTH_ALPHA,
+    SMOOTH_RESET_IOU_THRESHOLD,
+    SMOOTH_RESET_CENTER_DISTANCE_RATIO,
     MAX_FACE_AGE,
     EMBEDDING_REFRESH_INTERVAL,
 )
@@ -17,9 +19,6 @@ from face_utils import l2_normalize
 # Gallery / smoothing 설정
 EMBEDDING_POOL_SIZE = 5
 TRACK_REUSE_THRESHOLD_RATIO = 0.85
-SMOOTH_RESET_IOU_THRESHOLD = 0.15
-SMOOTH_RESET_CENTER_DISTANCE_RATIO = 1.5
-
 
 def get_face_analysis_runtime():
     if hasattr(ort, "preload_dlls"):
@@ -374,7 +373,7 @@ def smooth_bbox(face_id, bbox, alpha=SMOOTH_ALPHA):
 
     should_reset = (
         iou < SMOOTH_RESET_IOU_THRESHOLD
-        and center_dist > SMOOTH_RESET_CENTER_DISTANCE_RATIO * diag
+        or center_dist > SMOOTH_RESET_CENTER_DISTANCE_RATIO * diag
     )
 
     if should_reset:

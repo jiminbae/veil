@@ -12,22 +12,24 @@ TARGET_DIR = str(BASE_DIR / "target")
 TARGET_PATTERN = "target*"
 TARGET_IMAGE_PATH = str(BASE_DIR / "virtual_face" / "fake_face.jpg")
 
-OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target5.mp4")
-LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target5_log.txt")
-METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata5.json")
-CROP_ROOT = str(BASE_DIR / "outputs/crop/crop5")
+OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target6.mp4")
+LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target6_log.txt")
+METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata6.json")
+CROP_ROOT = str(BASE_DIR / "outputs/crop/crop6")
 LIVEPORTRAIT_DIR = str(PROJECT_DIR / "LivePortrait")
 
 ENABLE_FACE_SWAP = True
 STITCH_BLUR_KERNEL = 21
-FACE_SWAP_BATCH_SIZE = 32
+FACE_SWAP_BATCH_SIZE = 8
 
 device = "cuda"
 
 # 얼굴 인식 / Target 판별 기준
 SIM_THRESHOLD = 0.38
 TARGET_THRESHOLD = 0.50
-SMOOTH_ALPHA = 0.8
+SMOOTH_ALPHA = 0.55
+SMOOTH_RESET_IOU_THRESHOLD = 0.15
+SMOOTH_RESET_CENTER_DISTANCE_RATIO = 0.45
 MAX_FACE_AGE = 300
 
 # Target 유지 프레임 수
@@ -74,4 +76,4 @@ LOG_EVERY_N_FRAMES = 10
 CROP_WRITER_WORKERS = 2
 
 # swap flicker 방지
-SWAP_HOLD_FRAMES = 3
+SWAP_HOLD_FRAMES = 5

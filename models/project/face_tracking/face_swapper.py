@@ -5,16 +5,81 @@ import torch
 from time import perf_counter
 from pathlib import Path
 import sys
+import logging
 
 root_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_dir))
 
 from LivePortrait.src.live_portrait_pipeline import LivePortraitPipeline
 from LivePortrait.src.utils.cropper import Cropper
-from LivePortrait.src.utils.crop import paste_back
 from LivePortrait.src.config.inference_config import InferenceConfig
 from LivePortrait.src.config.crop_config import CropConfig
 
+def match_color(source, target, code_to_lab, code_from_lab):
+    source_lab = cv2.cvtColor(source, code_to_lab).astype(np.float32)
+    target_lab = cv2.cvtColor(target, code_to_lab).astype(np.float32)
+
+    s_mean, s_std = cv2.meanStdDev(source_lab)
+    t_mean, t_std = cv2.meanStdDev(target_lab)
+
+    s_mean = s_mean.reshape(1, 1, 3)
+    s_std = s_std.reshape(1, 1, 3)
+    t_mean = t_mean.reshape(1, 1, 3)
+    t_std = t_std.reshape(1, 1, 3)
+
+    result = (source_lab - s_mean) / (s_std + 1e-6) * t_std + t_mean
+    result = np.clip(result, 0, 255).astype(np.uint8)
+
+    return cv2.cvtColor(result, code_from_lab)
+
+def blend_face(frame_bgr, swapped_face_bgr, bbox):
+    x1, y1, x2, y2 = map(int, bbox)
+    H, W = frame_bgr.shape[:2]
+
+    x1 = max(0, x1)
+    y1 = max(0, y1)
+    x2 = min(W, x2)
+    y2 = min(H, y2)
+
+    if x2 <= x1 or y2 <= y1:
+        return frame_bgr
+
+    w = x2 - x1
+    h = y2 - y1
+
+    roi = frame_bgr[y1:y2, x1:x2]
+    swapped_resized = cv2.resize(swapped_face_bgr, (w, h))
+
+    gray = cv2.cvtColor(swapped_resized, cv2.COLOR_BGR2GRAY)
+    non_black_mask = (gray > 35).astype(np.float32)
+
+    ellipse_mask = np.zeros((h, w), dtype=np.float32)
+    center = (w // 2, h // 2)
+    axes = (max(1, int(w * 0.42)), max(1, int(h * 0.48)))
+    cv2.ellipse(ellipse_mask, center, axes, 0, 0, 360, 1.0, -1)
+
+    mask = non_black_mask * ellipse_mask
+
+    blur_size = max(15, int(min(w, h) * 0.18))
+    blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
+
+    mask = cv2.GaussianBlur(mask, (blur_size, blur_size), 0)
+    mask = np.clip(mask, 0.0, 1.0)[..., None]
+
+    swapped_matched = match_color(
+        swapped_resized,
+        roi,
+        cv2.COLOR_BGR2LAB,
+        cv2.COLOR_LAB2BGR,
+    )
+
+    blended = (
+        swapped_matched.astype(np.float32) * mask
+        + roi.astype(np.float32) * (1.0 - mask)
+    )
+
+    frame_bgr[y1:y2, x1:x2] = np.clip(blended, 0, 255).astype(np.uint8)
+    return frame_bgr
 
 class LPProcessor:
     def __init__(self, device_type="cpu"):
@@ -203,6 +268,14 @@ class LPProcessor:
 
         frame_roi = frame_rgb[ry1:ry2, rx1:rx2]
 
+        if result_roi.shape == frame_roi.shape:
+            result_roi = match_color(
+                result_roi,
+                frame_roi,
+                cv2.COLOR_RGB2LAB,
+                cv2.COLOR_LAB2RGB,
+            )
+
         if mask_roi.ndim == 2:
             mask_roi_3ch = np.stack([mask_roi] * 3, axis=-1)
         else:
@@ -333,8 +406,8 @@ class LPProcessor:
 
             return M_align.astype(np.float32)
 
-        except Exception as e:
-            print(f"[FaceSwapper] M_align calculation failed: {e}")
+        except Exception:
+            logging.exception("[FaceSwapper] M_align calculation failed")
             return None
 
     def _paste_with_align(self, I_p, M_align, frame_rgb, bbox, landmarks):
@@ -353,6 +426,24 @@ class LPProcessor:
             mask_ori = self._build_landmark_mask(frame_rgb.shape, bbox, landmarks)
         else:
             mask_ori = self._build_output_face_mask(I_p, M_align, frame_rgb.shape, bbox)
+
+        bx1, by1, bx2, by2 = map(int, bbox)
+        bx1 = max(0, bx1)
+        by1 = max(0, by1)
+        bx2 = min(W, bx2)
+        by2 = min(H, by2)
+
+        if bx2 > bx1 and by2 > by1:
+            warped_roi = warped_face[by1:by2, bx1:bx2]
+            frame_roi = frame_rgb[by1:by2, bx1:bx2]
+
+            if warped_roi.shape == frame_roi.shape:
+                warped_face[by1:by2, bx1:bx2] = match_color(
+                    warped_roi,
+                    frame_roi,
+                    cv2.COLOR_RGB2LAB,
+                    cv2.COLOR_LAB2RGB,
+                )
 
         m = mask_ori.astype(np.float32)
 
@@ -428,8 +519,8 @@ class LPProcessor:
 
                     return mask_warped.astype(np.float32) / 255.0
 
-        except Exception as e:
-            print(f"[FaceSwapper] output face mask failed, fallback: {e}")
+        except Exception:
+            logging.exception("[FaceSwapper] output face mask failed")
 
         mask_fb = np.zeros((H, W), dtype=np.uint8)
         cx, cy = (bx1 + bx2) // 2, (by1 + by2) // 2
@@ -478,8 +569,8 @@ class LPProcessor:
                     landmarks=landmarks,
                     target_kps=target_kps,
                 )
-            except Exception as e:
-                print(f"[FaceSwapper] prepare error: {e}")
+            except Exception:
+                logging.exception("[FaceSwapper] prepare error")
                 item = None
 
             if item is not None:
@@ -547,9 +638,6 @@ class LPProcessor:
 
                     M_align = None
 
-                    if target_kps is not None:
-                        M_align = self._try_build_align_transform(I_p, target_kps)
-
                     if M_align is not None:
                         frame_rgb, mask_ori = self._paste_with_align(
                             I_p,
@@ -558,21 +646,6 @@ class LPProcessor:
                             bbox,
                             target_kps,
                         )
-
-                    elif landmarks is not None and len(landmarks) >= 5:
-                        mask_ori = self._build_landmark_mask(
-                            frame_rgb.shape,
-                            bbox,
-                            landmarks,
-                        )
-
-                        frame_rgb = paste_back(
-                            I_p,
-                            item["M_c2o_full"],
-                            frame_rgb,
-                            mask_ori,
-                        )
-
                     else:
                         frame_rgb, mask_ori = self._paste_back_default_mask_roi(
                             I_p,
@@ -581,14 +654,17 @@ class LPProcessor:
                             bbox,
                         )
 
+                    if mask_ori is None:
+                        continue
+
                     cur_idx = item["index"]
                     success_flags[cur_idx] = True
                     masks[cur_idx] = mask_ori
 
                 paste_elapsed += perf_counter() - paste_started
 
-            except Exception as e:
-                print(f"[FaceSwapper] batch swap error: {e}")
+            except Exception:
+                logging.exception("[FaceSwapper] batch swap error")
 
         result_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
 
@@ -614,7 +690,6 @@ class LPProcessor:
             return None, None
 
         return result_bgr, masks[0]
-
 
 class FaceSwapper:
     def __init__(self, target_image_path, device="cpu"):
