@@ -5,7 +5,8 @@ from time import perf_counter
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
-from face_swapper import FaceSwapper, blend_face
+from face_swapper import FaceSwapper
+
 
 from config import (
     VIDEO_PATH,
@@ -131,7 +132,8 @@ def paste_cached_swap(render_frame, track_ctx, current_frame_idx):
     if cached_patch is None or cached_patch.size == 0:
         return render_frame, False
 
-    render_frame = blend_face(render_frame, cached_patch, [x1, y1, x2, y2])
+    resized_patch = cv2.resize(cached_patch, (target_w, target_h))
+    render_frame[y1:y2, x1:x2] = resized_patch
 
     return render_frame, True
 
@@ -295,6 +297,21 @@ def finalize_track(
 
     if is_background:
         if quality == "GOOD":
+            # if smooth_crop is not None:
+            #     crop_path = save_background_crop(
+            #         smooth_crop,
+            #         stable_face_id,
+            #         raw_track_id,
+            #         current_frame_idx,
+            #         crop_executor,
+            #         crop_write_futures
+            #     )
+            # else:
+            #     logging.warning(
+            #         f"Frame={current_frame_idx} "
+            #         f"TrackID={raw_track_id} "
+            #         "Quality=GOOD but smooth_crop is None"
+            #     )
 
             if not swap_success:
                 render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
@@ -496,19 +513,22 @@ def main():
                     for idx in swap_indices
                 ]
 
-                track_kps_list = [
+                swap_landmarks = [
                     track_contexts[idx].get("target_kps")
                     for idx in swap_indices
                 ]
 
-                swap_target_kps = [None for _ in swap_indices]
+                swap_target_kps = [
+                    track_contexts[idx].get("target_kps")
+                    for idx in swap_indices
+                ]
                 
                 swap_started = perf_counter()
 
                 render_frame, swap_success_flags, _, swap_timings = swapper.swap_many_into_frame(
                     render_frame,
                     swap_bboxes,
-                    landmarks_list=track_kps_list,
+                    landmarks_list=swap_landmarks,
                     target_kps_list=swap_target_kps,
                     batch_size=FACE_SWAP_BATCH_SIZE,
                 )
@@ -556,11 +576,7 @@ def main():
             for idx, track_ctx in enumerate(track_contexts):
                 swap_success = swap_success_by_index.get(idx, False)
 
-                if (
-                    not swap_success
-                    and track_ctx["is_background"]
-                    and track_ctx["quality"] == "GOOD"
-                ):
+                if not swap_success and track_ctx["is_background"]:
                     render_frame, cache_success = paste_cached_swap(
                         render_frame,
                         track_ctx,
