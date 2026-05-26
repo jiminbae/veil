@@ -97,6 +97,11 @@ def cleanup_target_last_seen(current_frame_idx):
         )
 
 def get_swap_key(track_ctx):
+    stable_face_id = track_ctx.get("stable_face_id")
+
+    if stable_face_id is not None:
+        return f"face_{stable_face_id}"
+
     return f"track_{track_ctx['raw_track_id']}"
 
 def compute_bbox_iou(box_a, box_b):
@@ -210,19 +215,24 @@ def prepare_track(
 
     if emb is not None:
         is_target, target_sim = check_target_match(emb, target_embeddings)
-        if is_target:
-            target_track_ids.add(raw_track_id)
-            target_last_seen[f"track_{raw_track_id}"] = current_frame_idx
 
+        if is_target:
             if stable_face_id is not None:
                 target_face_ids.add(stable_face_id)
                 target_last_seen[f"face_{stable_face_id}"] = current_frame_idx
 
-    if stable_face_id in target_face_ids:
+            target_track_ids.add(raw_track_id)
+            target_last_seen[f"track_{raw_track_id}"] = current_frame_idx
+
+    if stable_face_id is not None and stable_face_id in target_face_ids:
         target_track_ids.add(raw_track_id)
+        target_last_seen[f"face_{stable_face_id}"] = current_frame_idx
+        target_last_seen[f"track_{raw_track_id}"] = current_frame_idx
 
     if raw_track_id in target_track_ids and stable_face_id is not None:
         target_face_ids.add(stable_face_id)
+        target_last_seen[f"face_{stable_face_id}"] = current_frame_idx
+        target_last_seen[f"track_{raw_track_id}"] = current_frame_idx
 
     if stable_face_id is not None:
         sx1, sy1, sx2, sy2 = smooth_bbox(stable_face_id, [x1, y1, x2, y2])
@@ -233,16 +243,16 @@ def prepare_track(
     smoothed_bbox = [sx1, sy1, sx2, sy2]
     is_target_final = False
 
-    if stable_face_id is not None and stable_face_id in target_face_ids:
-        last_seen = target_last_seen.get(f"face_{stable_face_id}", -999999)
+    if stable_face_id is not None:
+        face_last_seen = target_last_seen.get(f"face_{stable_face_id}", -999999)
 
-        if current_frame_idx - last_seen <= TARGET_HOLD_FRAMES:
+        if stable_face_id in target_face_ids and current_frame_idx - face_last_seen <= TARGET_HOLD_FRAMES:
             is_target_final = True
 
-    if not is_target_final and raw_track_id in target_track_ids:
-        last_seen = target_last_seen.get(f"track_{raw_track_id}", -999999)
+    if not is_target_final:
+        track_last_seen = target_last_seen.get(f"track_{raw_track_id}", -999999)
 
-        if current_frame_idx - last_seen <= TARGET_HOLD_FRAMES:
+        if raw_track_id in target_track_ids and current_frame_idx - track_last_seen <= TARGET_HOLD_FRAMES:
             is_target_final = True
 
     is_background = not is_target_final

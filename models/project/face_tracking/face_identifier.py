@@ -262,7 +262,7 @@ def cleanup_old_face_ids(current_frame):
         face_gallery.pop(face_id, None)
         face_last_seen.pop(face_id, None)
         bbox_smoother.pop(face_id, None)
-        target_face_ids.discard(face_id)
+        #target_face_ids.discard(face_id)
 
     for track_id, face_id in list(track_to_face.items()):
         if face_id in expired_face_ids:
@@ -405,7 +405,7 @@ def smooth_bbox(face_id, bbox, alpha=SMOOTH_ALPHA):
         bbox_smoother[face_id] = bbox
         return bbox.astype(int)
 
-    smoothed = alpha * prev_bbox + (1 - alpha) * bbox
+    smoothed = alpha * bbox + (1 - alpha) * prev_bbox
     bbox_smoother[face_id] = smoothed
 
     return smoothed.astype(int)
