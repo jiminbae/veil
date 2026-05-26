@@ -99,6 +99,41 @@ def cleanup_target_last_seen(current_frame_idx):
 def get_swap_key(track_ctx):
     return f"track_{track_ctx['raw_track_id']}"
 
+def compute_bbox_iou(box_a, box_b):
+    ax1, ay1, ax2, ay2 = map(float, box_a)
+    bx1, by1, bx2, by2 = map(float, box_b)
+
+    ix1 = max(ax1, bx1)
+    iy1 = max(ay1, by1)
+    ix2 = min(ax2, bx2)
+    iy2 = min(ay2, by2)
+
+    inter = max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
+    area_a = max(0.0, ax2 - ax1) * max(0.0, ay2 - ay1)
+    area_b = max(0.0, bx2 - bx1) * max(0.0, by2 - by1)
+    union = area_a + area_b - inter
+
+    if union <= 1e-6:
+        return 0.0
+
+    return inter / union
+
+def is_cached_swap_compatible(cached_bbox, current_bbox):
+    iou = compute_bbox_iou(cached_bbox, current_bbox)
+
+    if iou < 0.65:
+        return False
+
+    cw = max(1, cached_bbox[2] - cached_bbox[0])
+    ch = max(1, cached_bbox[3] - cached_bbox[1])
+    nw = max(1, current_bbox[2] - current_bbox[0])
+    nh = max(1, current_bbox[3] - current_bbox[1])
+
+    width_ratio = nw / cw
+    height_ratio = nh / ch
+
+    return 0.80 <= width_ratio <= 1.25 and 0.80 <= height_ratio <= 1.25
+
 def paste_cached_swap(render_frame, track_ctx, current_frame_idx):
     swap_key = get_swap_key(track_ctx)
     cached = swap_patch_cache.get(swap_key)
@@ -119,6 +154,12 @@ def paste_cached_swap(render_frame, track_ctx, current_frame_idx):
     target_h = y2 - y1
 
     if target_w <= 0 or target_h <= 0:
+        return render_frame, False
+
+    current_bbox = [x1, y1, x2, y2]
+    cached_bbox = cached.get("bbox")
+
+    if cached_bbox is None or not is_cached_swap_compatible(cached_bbox, current_bbox):
         return render_frame, False
 
     cached_patch = cached["patch"]
@@ -156,7 +197,7 @@ def prepare_track(
 ):
     x1, y1, x2, y2, raw_track_id = map(int, track[:5])
 
-    emb, target_kps, embedding_refreshed = get_track_embedding(
+    emb, track_kps, embedding_refreshed = get_track_embedding(
         original_frame,
         [x1, y1, x2, y2],
         raw_track_id,
@@ -219,7 +260,7 @@ def prepare_track(
         "raw_bbox": raw_bbox,
         "smoothed_bbox": smoothed_bbox,
         "emb": emb,
-        "target_kps": target_kps,
+        "track_kps": track_kps,
         "embedding_refreshed": embedding_refreshed,
         "is_target": is_target,
         "target_sim": target_sim,
@@ -502,19 +543,17 @@ def main():
                 ]
 
                 track_kps_list = [
-                    track_contexts[idx].get("target_kps")
+                    track_contexts[idx].get("track_kps")
                     for idx in swap_indices
                 ]
 
-                swap_target_kps = [None for _ in swap_indices]
-                
                 swap_started = perf_counter()
 
                 render_frame, swap_success_flags, _, swap_timings = swapper.swap_many_into_frame(
                     render_frame,
                     swap_bboxes,
                     landmarks_list=track_kps_list,
-                    target_kps_list=swap_target_kps,
+                    target_kps_list=track_kps_list,
                     batch_size=FACE_SWAP_BATCH_SIZE,
                 )
                 swap_elapsed = perf_counter() - swap_started

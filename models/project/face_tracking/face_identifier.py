@@ -153,12 +153,38 @@ def get_target_image_paths(target_dir, pattern="target*"):
 
 
 # 타겟 이미지 embedding 추출
+def prepare_target_image(image):
+    if image.ndim == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    elif image.shape[2] == 4:
+        bgr = image[:, :, :3].astype(np.float32)
+        alpha = image[:, :, 3:4].astype(np.float32) / 255.0
+        white = np.full_like(bgr, 255.0)
+        image = (bgr * alpha + white * (1.0 - alpha)).astype(np.uint8)
+
+    height, width = image.shape[:2]
+    min_side = min(height, width)
+
+    if min_side > 0 and min_side < 320:
+        scale = 320 / min_side
+        image = cv2.resize(
+            image,
+            None,
+            fx=scale,
+            fy=scale,
+            interpolation=cv2.INTER_CUBIC,
+        )
+
+    return image
+
+
 def get_target_embedding(image_path):
-    image = cv2.imread(image_path)
+    image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 
     if image is None:
         raise RuntimeError(f"Cannot read target image: {image_path}")
 
+    image = prepare_target_image(image)
     faces = face_app.get(image)
 
     if len(faces) == 0:
@@ -180,7 +206,6 @@ def get_target_embedding(image_path):
         raise RuntimeError("Failed to normalize target embedding")
 
     return emb
-
 
 # 타겟 얼굴 판별
 def check_target_match(embedding, target_embeddings):

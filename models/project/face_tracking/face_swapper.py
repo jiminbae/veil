@@ -638,13 +638,16 @@ class LPProcessor:
 
                     M_align = None
 
+                    if target_kps is not None:
+                        M_align = self._try_build_align_transform(I_p, target_kps)
+
                     if M_align is not None:
                         frame_rgb, mask_ori = self._paste_with_align(
                             I_p,
                             M_align,
                             frame_rgb,
                             bbox,
-                            target_kps,
+                            landmarks,
                         )
                     else:
                         frame_rgb, mask_ori = self._paste_back_default_mask_roi(
