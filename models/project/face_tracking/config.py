@@ -1,7 +1,39 @@
+import re
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent
+
+
+def _next_output_index():
+    outputs_dir = BASE_DIR / "outputs"
+    patterns = (
+        ("result", r"output_target(\d+)\.mp4$"),
+        ("log", r"tracking_target(\d+)_log\.txt$"),
+        ("metadata", r"face_metadata(\d+)\.json$"),
+        ("metadata", r"tracking_metadata(\d+)\.json$"),
+        ("crop", r"crop(\d+)$"),
+    )
+    max_index = 0
+
+    for subdir, pattern in patterns:
+        search_dir = outputs_dir / subdir
+
+        if not search_dir.exists():
+            continue
+
+        regex = re.compile(pattern)
+
+        for path in search_dir.iterdir():
+            match = regex.match(path.name)
+
+            if match:
+                max_index = max(max_index, int(match.group(1)))
+
+    return max_index + 1
+
+
+RUN_INDEX = _next_output_index()
 
 # 입출력 경로
 VIDEO_PATH = str(BASE_DIR / "videos/test.mp4")
@@ -12,10 +44,11 @@ TARGET_DIR = str(BASE_DIR / "target")
 TARGET_PATTERN = "target*"
 TARGET_IMAGE_PATH = str(BASE_DIR / "virtual_face" / "fake_face.jpg")
 
-OUTPUT_PATH = str(BASE_DIR / "outputs/result/output_target6.mp4")
-LOG_PATH = str(BASE_DIR / "outputs/log/tracking_target6_log.txt")
-METADATA_PATH = str(BASE_DIR / "outputs/metadata/face_metadata6.json")
-CROP_ROOT = str(BASE_DIR / "outputs/crop/crop6")
+OUTPUT_PATH = str(BASE_DIR / f"outputs/result/output_target{RUN_INDEX}.mp4")
+LOG_PATH = str(BASE_DIR / f"outputs/log/tracking_target{RUN_INDEX}_log.txt")
+METADATA_PATH = str(BASE_DIR / f"outputs/metadata/face_metadata{RUN_INDEX}.json")
+TRACKING_METADATA_PATH = str(BASE_DIR / f"outputs/metadata/tracking_metadata{RUN_INDEX}.json")
+CROP_ROOT = str(BASE_DIR / f"outputs/crop/crop{RUN_INDEX}")
 LIVEPORTRAIT_DIR = str(PROJECT_DIR / "LivePortrait")
 
 ENABLE_FACE_SWAP = True

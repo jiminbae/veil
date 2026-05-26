@@ -17,6 +17,7 @@ from config import (
     LOG_PATH,
     CROP_ROOT,
     METADATA_PATH,
+    TRACKING_METADATA_PATH,
     SIM_THRESHOLD,
     TARGET_THRESHOLD,
     SMOOTH_ALPHA,
@@ -51,6 +52,7 @@ def setup_dirs_and_logging():
     Path(LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
     Path(CROP_ROOT).mkdir(parents=True, exist_ok=True)
     Path(METADATA_PATH).parent.mkdir(parents=True, exist_ok=True)
+    Path(TRACKING_METADATA_PATH).parent.mkdir(parents=True, exist_ok=True)
 
     logging.basicConfig(
         filename=LOG_PATH,
@@ -66,6 +68,7 @@ def setup_dirs_and_logging():
     logging.info(f"OUTPUT_PATH={OUTPUT_PATH}")
     logging.info(f"CROP_ROOT={CROP_ROOT}")
     logging.info(f"METADATA_PATH={METADATA_PATH}")
+    logging.info(f"TRACKING_METADATA_PATH={TRACKING_METADATA_PATH}")
     logging.info(f"SIM_THRESHOLD={SIM_THRESHOLD}")
     logging.info(f"TARGET_THRESHOLD={TARGET_THRESHOLD}")
     logging.info(f"SMOOTH_ALPHA={SMOOTH_ALPHA}")
@@ -685,7 +688,7 @@ def main():
     if failed_crop_writes:
         logging.warning(f"Failed crop writes: {failed_crop_writes[:20]}")
 
-    tracking_metadata_path = Path(METADATA_PATH).with_name("tracking_metadata.json")
+    tracking_metadata_path = Path(TRACKING_METADATA_PATH)
 
     save_metadata(tracking_metadata_path, all_tracking_metadata)
     save_metadata(METADATA_PATH, all_face_metadata)
