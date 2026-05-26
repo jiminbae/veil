@@ -28,6 +28,7 @@ from config import (
     ENABLE_FACE_SWAP,
     FACE_SWAP_BATCH_SIZE,
     SWAP_HOLD_FRAMES,
+    MAX_SWAP_FACES_PER_FRAME,
     device,
 )
 
@@ -44,7 +45,7 @@ from face_identifier import (
     target_face_ids,
     target_track_ids,
 )
-from crop_manager import assess_face_quality, apply_fallback_blur, save_background_crop
+from crop_manager import assess_face_quality, apply_fallback_blur
 from metadata_manager import make_face_data, save_metadata
 
 def setup_dirs_and_logging():
@@ -77,8 +78,30 @@ def setup_dirs_and_logging():
     logging.info(f"LOG_EVERY_N_FRAMES={LOG_EVERY_N_FRAMES}")
     logging.info(f"FACE_SWAP_BATCH_SIZE={FACE_SWAP_BATCH_SIZE}")
     logging.info(f"SWAP_HOLD_FRAMES={SWAP_HOLD_FRAMES}")
+    logging.info(f"MAX_SWAP_FACES_PER_FRAME={MAX_SWAP_FACES_PER_FRAME}")
 
 target_last_seen = {}
+
+def mark_target_seen(stable_face_id, raw_track_id, current_frame_idx):
+    if stable_face_id is not None:
+        target_face_ids.add(stable_face_id)
+        target_last_seen[f"face_{stable_face_id}"] = current_frame_idx
+
+    target_track_ids.add(raw_track_id)
+    target_last_seen[f"track_{raw_track_id}"] = current_frame_idx
+
+
+def is_known_target_face(stable_face_id):
+    return stable_face_id is not None and stable_face_id in target_face_ids
+
+
+def is_recent_target_track(raw_track_id, current_frame_idx):
+    last_seen = target_last_seen.get(f"track_{raw_track_id}", -999999)
+
+    return (
+        raw_track_id in target_track_ids
+        and current_frame_idx - last_seen <= TARGET_HOLD_FRAMES
+    )
 
 swap_patch_cache = {}
 
@@ -91,6 +114,13 @@ def cleanup_target_last_seen(current_frame_idx):
 
     for key in stale_keys:
         target_last_seen.pop(key, None)
+
+        if key.startswith("track_"):
+            try:
+                stale_track_id = int(key.replace("track_", ""))
+                target_track_ids.discard(stale_track_id)
+            except ValueError:
+                pass
 
     if stale_keys and current_frame_idx % LOG_EVERY_N_FRAMES == 0:
         logging.info(
@@ -125,6 +155,23 @@ def compute_bbox_iou(box_a, box_b):
         return 0.0
 
     return inter / union
+
+def overlaps_with_target(ctx, track_contexts, iou_threshold=0.15):
+    if not ctx["is_background"]:
+        return False
+
+    bg_bbox = ctx["smoothed_bbox"]
+
+    for other in track_contexts:
+        if not other["is_target_final"]:
+            continue
+
+        target_bbox = other["smoothed_bbox"]
+
+        if compute_bbox_iou(bg_bbox, target_bbox) >= iou_threshold:
+            return True
+
+    return False
 
 def is_cached_swap_compatible(cached_bbox, current_bbox):
     iou = compute_bbox_iou(cached_bbox, current_bbox)
@@ -212,7 +259,12 @@ def prepare_track(
         current_frame_idx
     )
 
-    stable_face_id = assign_stable_face_id(raw_track_id, emb, current_frame_idx)
+    stable_face_id = assign_stable_face_id(
+        raw_track_id,
+        emb,
+        current_frame_idx,
+        [x1, y1, x2, y2]
+    )
     is_target = False
     target_sim = -1.0
 
@@ -220,22 +272,13 @@ def prepare_track(
         is_target, target_sim = check_target_match(emb, target_embeddings)
 
         if is_target:
-            if stable_face_id is not None:
-                target_face_ids.add(stable_face_id)
-                target_last_seen[f"face_{stable_face_id}"] = current_frame_idx
+            mark_target_seen(stable_face_id, raw_track_id, current_frame_idx)
 
-            target_track_ids.add(raw_track_id)
-            target_last_seen[f"track_{raw_track_id}"] = current_frame_idx
+    if is_known_target_face(stable_face_id):
+        mark_target_seen(stable_face_id, raw_track_id, current_frame_idx)
 
-    if stable_face_id is not None and stable_face_id in target_face_ids:
-        target_track_ids.add(raw_track_id)
-        target_last_seen[f"face_{stable_face_id}"] = current_frame_idx
-        target_last_seen[f"track_{raw_track_id}"] = current_frame_idx
-
-    if raw_track_id in target_track_ids and stable_face_id is not None:
-        target_face_ids.add(stable_face_id)
-        target_last_seen[f"face_{stable_face_id}"] = current_frame_idx
-        target_last_seen[f"track_{raw_track_id}"] = current_frame_idx
+    elif is_recent_target_track(raw_track_id, current_frame_idx):
+        mark_target_seen(stable_face_id, raw_track_id, current_frame_idx)
 
     if stable_face_id is not None:
         sx1, sy1, sx2, sy2 = smooth_bbox(stable_face_id, [x1, y1, x2, y2])
@@ -244,28 +287,15 @@ def prepare_track(
 
     raw_bbox = [x1, y1, x2, y2]
     smoothed_bbox = [sx1, sy1, sx2, sy2]
-    is_target_final = False
-
-    if stable_face_id is not None:
-        face_last_seen = target_last_seen.get(f"face_{stable_face_id}", -999999)
-
-        if stable_face_id in target_face_ids and current_frame_idx - face_last_seen <= TARGET_HOLD_FRAMES:
-            is_target_final = True
-
-    if not is_target_final:
-        track_last_seen = target_last_seen.get(f"track_{raw_track_id}", -999999)
-
-        if raw_track_id in target_track_ids and current_frame_idx - track_last_seen <= TARGET_HOLD_FRAMES:
-            is_target_final = True
+    is_target_final = (
+        is_known_target_face(stable_face_id)
+        or is_recent_target_track(raw_track_id, current_frame_idx)
+    )
 
     is_background = not is_target_final
 
     raw_crop = crop_with_padding(original_frame, raw_bbox)
     quality, fallback_reasons = assess_face_quality(original_frame, raw_bbox, emb, raw_crop)
-    smooth_crop = None
-
-    if is_background and quality == "GOOD":
-        smooth_crop = crop_with_padding(original_frame, smoothed_bbox)
 
     return {
         "raw_track_id": raw_track_id,
@@ -281,7 +311,6 @@ def prepare_track(
         "is_background": is_background,
         "quality": quality,
         "fallback_reasons": fallback_reasons,
-        "smooth_crop": smooth_crop,
     }
 
 def make_face_metadata(
@@ -333,7 +362,6 @@ def finalize_track(
     is_background = track_ctx["is_background"]
     quality = track_ctx["quality"]
     fallback_reasons = track_ctx["fallback_reasons"]
-    smooth_crop = track_ctx["smooth_crop"]
     x1, y1, x2, y2 = raw_bbox
     sx1, sy1, sx2, sy2 = smoothed_bbox
     crop_path = None
@@ -415,7 +443,7 @@ def finalize_track(
                 label = f"BG ID {stable_face_id} BLUR"
                 color = (0, 165, 255)
     else:
-        if raw_track_id in target_track_ids:
+        if is_target_final:
             label = f"TARGET Track {raw_track_id}"
             color = (0, 0, 255)
         else:
@@ -538,8 +566,14 @@ def main():
             swap_indices = [
                 idx
                 for idx, ctx in enumerate(track_contexts)
-                if ctx["is_background"] and ctx["quality"] == "GOOD"
+                if (
+                    ctx["is_background"]
+                    and ctx["quality"] == "GOOD"
+                    and not overlaps_with_target(ctx, track_contexts)
+                )
             ]
+
+            swap_indices = swap_indices[:MAX_SWAP_FACES_PER_FRAME]
             swap_success_by_index = {}
             swap_elapsed = 0.0
             swap_timings = {
@@ -615,7 +649,7 @@ def main():
                 if (
                     not swap_success
                     and track_ctx["is_background"]
-                    and track_ctx["quality"] == "GOOD"
+                    and not overlaps_with_target(track_ctx, track_contexts)
                 ):
                     render_frame, cache_success = paste_cached_swap(
                         render_frame,

@@ -159,8 +159,8 @@ class LPProcessor:
         if bw <= 0 or bh <= 0:
             return None
 
-        pad_w = int(bw * 0.70)
-        pad_h = int(bh * 0.60)
+        pad_w = int(bw * 0.45)
+        pad_h = int(bh * 0.45)
 
         px1 = max(0, x1 - pad_w)
         py1 = max(0, y1 - pad_h)
@@ -382,7 +382,7 @@ class LPProcessor:
         bbox_limit[ly1:ly2, lx1:lx2] = 255
         mask = cv2.bitwise_and(mask, bbox_limit)
 
-        blur_size = max(31, int(face_size * 0.12))
+        blur_size = max(21, int(face_size * 0.08))
         blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
 
         mask = cv2.GaussianBlur(mask, (blur_size, blur_size), 0)
@@ -654,26 +654,12 @@ class LPProcessor:
                     landmarks = item.get("landmarks")
                     bbox = item["bbox"]
 
-                    M_align = None
-
-                    if target_kps is not None:
-                        M_align = self._try_build_align_transform(I_p, target_kps)
-
-                    if M_align is not None:
-                        frame_rgb, mask_ori = self._paste_with_align(
-                            I_p,
-                            M_align,
-                            frame_rgb,
-                            bbox,
-                            landmarks,
-                        )
-                    else:
-                        frame_rgb, mask_ori = self._paste_back_default_mask_roi(
-                            I_p,
-                            item["M_c2o_full"],
-                            frame_rgb,
-                            bbox,
-                        )
+                    frame_rgb, mask_ori = self._paste_back_default_mask_roi(
+                        I_p,
+                        item["M_c2o_full"],
+                        frame_rgb,
+                        bbox,
+                    )
 
                     if mask_ori is None:
                         continue

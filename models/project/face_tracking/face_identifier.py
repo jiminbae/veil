@@ -12,12 +12,16 @@ from config import (
     SMOOTH_RESET_CENTER_DISTANCE_RATIO,
     MAX_FACE_AGE,
     EMBEDDING_REFRESH_INTERVAL,
+    ID_MIN_FACE_SIZE,
 )
 from face_utils import l2_normalize
 
 
 # Gallery / smoothing 설정
 EMBEDDING_POOL_SIZE = 5
+BBOX_FALLBACK_MAX_AGE = 30
+BBOX_FALLBACK_IOU_THRESHOLD = 0.35
+BBOX_FALLBACK_CENTER_RATIO = 0.75
 TRACK_REUSE_THRESHOLD_RATIO = 0.85
 
 def get_face_analysis_runtime():
@@ -48,13 +52,22 @@ next_face_id = 1
 
 face_gallery = {}   
 face_last_seen = {}    
+face_last_bbox = {}
 track_to_face = {}    
 track_last_emb = {}  
 bbox_smoother = {}
-track_last_kps = {}     
+track_last_kps = {}    
 
 target_face_ids = set()
 target_track_ids = set()
+
+
+def is_too_small_for_identity(box):
+    x1, y1, x2, y2 = map(int, box)
+    bw = x2 - x1
+    bh = y2 - y1
+
+    return bw <= 0 or bh <= 0 or min(bw, bh) < ID_MIN_FACE_SIZE
 
 
 # 임베딩 추출
@@ -66,6 +79,8 @@ def get_arcface_embedding(frame, box):
     bh = y2 - y1
 
     if bw <= 0 or bh <= 0:
+        return None, None
+    if min(bw, bh) < ID_MIN_FACE_SIZE:
         return None, None
 
     pad_w = int(bw * 0.25)
@@ -113,6 +128,9 @@ def get_arcface_embedding(frame, box):
 
 # Track embedding 캐시
 def get_track_embedding(frame, box, track_id, current_frame):
+    if is_too_small_for_identity(box):
+        return None, None, False
+
     cached_emb = track_last_emb.get(track_id)
     cached_kps = track_last_kps.get(track_id)
 
@@ -127,7 +145,7 @@ def get_track_embedding(frame, box, track_id, current_frame):
     emb, kps = get_arcface_embedding(frame, box)
 
     if emb is None:
-        return cached_emb, cached_kps, False
+        return None, None, False
 
     track_last_emb[track_id] = emb
     track_last_kps[track_id] = kps
@@ -261,8 +279,8 @@ def cleanup_old_face_ids(current_frame):
     for face_id in expired_face_ids:
         face_gallery.pop(face_id, None)
         face_last_seen.pop(face_id, None)
+        face_last_bbox.pop(face_id, None)
         bbox_smoother.pop(face_id, None)
-        #target_face_ids.discard(face_id)
 
     for track_id, face_id in list(track_to_face.items()):
         if face_id in expired_face_ids:
@@ -273,12 +291,10 @@ def cleanup_old_face_ids(current_frame):
 
 
 # Stable Face ID 부여
-def assign_stable_face_id(track_id, embedding, current_frame):
+def assign_stable_face_id(track_id, embedding, current_frame, bbox=None):
     global next_face_id
 
-    if embedding is None:
-        embedding = track_last_emb.get(track_id)
-    else:
+    if embedding is not None:
         track_last_emb[track_id] = embedding
 
     # 기존 track_id가 이미 stable face_id에 연결된 경우
@@ -287,8 +303,16 @@ def assign_stable_face_id(track_id, embedding, current_frame):
 
         if stable_id in face_gallery:
             if embedding is None:
-                face_last_seen[stable_id] = current_frame
-                return stable_id
+                fallback_id = assign_bbox_fallback(
+                    track_id,
+                    bbox,
+                    current_frame
+                )
+
+                if fallback_id is not None:
+                    return fallback_id
+
+                return None
 
             best_sim = get_gallery_best_similarity(
                 embedding,
@@ -298,6 +322,10 @@ def assign_stable_face_id(track_id, embedding, current_frame):
             if best_sim >= SIM_THRESHOLD * TRACK_REUSE_THRESHOLD_RATIO:
                 update_gallery_embedding(stable_id, embedding)
                 face_last_seen[stable_id] = current_frame
+
+                if bbox is not None:
+                    face_last_bbox[stable_id] = bbox
+
                 return stable_id
 
             track_to_face.pop(track_id, None)
@@ -306,6 +334,15 @@ def assign_stable_face_id(track_id, embedding, current_frame):
             track_to_face.pop(track_id, None)
 
     if embedding is None:
+        fallback_id = assign_bbox_fallback(
+            track_id,
+            bbox,
+            current_frame
+        )
+
+        if fallback_id is not None:
+            return fallback_id
+
         return None
 
     # 전체 gallery에서 가장 비슷한 face_id 검색
@@ -328,6 +365,10 @@ def assign_stable_face_id(track_id, embedding, current_frame):
         next_face_id += 1
 
     face_last_seen[stable_id] = current_frame
+
+    if bbox is not None:
+        face_last_bbox[stable_id] = bbox
+
     track_to_face[track_id] = stable_id
 
     return stable_id
@@ -377,6 +418,53 @@ def compute_box_diag(box):
     h = max(1.0, box[3] - box[1])
 
     return float(np.sqrt(w ** 2 + h ** 2))
+
+
+def find_bbox_fallback_face_id(bbox, current_frame):
+    if bbox is None:
+        return None
+
+    best_id = None
+    best_score = -1.0
+
+    cur_diag = compute_box_diag(bbox)
+
+    for face_id, last_bbox in face_last_bbox.items():
+        last_seen = face_last_seen.get(face_id, -999999)
+
+        if current_frame - last_seen > BBOX_FALLBACK_MAX_AGE:
+            continue
+
+        iou = compute_single_iou(bbox, last_bbox)
+        center_dist = compute_center_distance(bbox, last_bbox)
+        center_score = max(0.0, 1.0 - center_dist / max(cur_diag, 1.0))
+
+        if iou < BBOX_FALLBACK_IOU_THRESHOLD and center_score < BBOX_FALLBACK_CENTER_RATIO:
+            continue
+
+        score = 0.7 * iou + 0.3 * center_score
+
+        if score > best_score:
+            best_score = score
+            best_id = face_id
+
+    return best_id
+
+
+def assign_bbox_fallback(track_id, bbox, current_frame):
+    if bbox is None or is_too_small_for_identity(bbox):
+        return None
+
+    fallback_id = find_bbox_fallback_face_id(bbox, current_frame)
+
+    if fallback_id is None:
+        return None
+
+    face_last_seen[fallback_id] = current_frame
+    face_last_bbox[fallback_id] = bbox
+    track_to_face[track_id] = fallback_id
+
+    return fallback_id
 
 
 # bbox smoothing
