@@ -7,6 +7,8 @@ from config import (
     EDGE_MARGIN,
     LIVEPORTRAIT_MIN_FACE_SIZE,
     LIVEPORTRAIT_MAX_FACE_AREA_RATIO,
+    ENABLE_POSE_FALLBACK,
+    SIDE_FACE_ASPECT_RATIO_THRESHOLD,
 )
 from face_utils import clip_bbox
 
@@ -31,6 +33,10 @@ def assess_face_quality(frame, bbox, embedding, crop):
     area = box_w * box_h
     aspect_ratio = max(box_w, box_h) / (min(box_w, box_h) + 1e-6)
     frame_area = w * h
+
+    if ENABLE_POSE_FALLBACK:
+        if aspect_ratio > SIDE_FACE_ASPECT_RATIO_THRESHOLD:
+            reasons.append("side_face_or_unstable_pose")
 
     if min(box_w, box_h) < LIVEPORTRAIT_MIN_FACE_SIZE:
         reasons.append("small_face_size")

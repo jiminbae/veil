@@ -60,7 +60,7 @@ LIVEPORTRAIT_MIN_CROP_SIZE = 64
 LIVEPORTRAIT_MAX_ASPECT_RATIO = 2.5
 
 # 너무 작은 얼굴 swap 방지
-LIVEPORTRAIT_MIN_FACE_SIZE = 90
+LIVEPORTRAIT_MIN_FACE_SIZE = 110
 
 # 화면 전체 가까운 큰 얼굴 swap 방지
 LIVEPORTRAIT_MAX_FACE_AREA_RATIO = 0.12
@@ -77,3 +77,24 @@ CROP_WRITER_WORKERS = 2
 
 # swap flicker 방지
 SWAP_HOLD_FRAMES = 5
+
+# 측면 얼굴 / 불안정 얼굴 swap 방지
+ENABLE_POSE_FALLBACK = True
+
+# bbox 안에서 얼굴 중심이 한쪽으로 치우치면 측면 얼굴로 간주
+# 값이 작을수록 더 엄격하게 blur 처리됨
+SIDE_FACE_CENTER_RATIO_THRESHOLD = 0.38
+
+# bbox 가로/세로 비율이 너무 극단적인 얼굴은 swap 대신 fallback
+SIDE_FACE_ASPECT_RATIO_THRESHOLD = 1.75
+
+# 손, 머리카락, 다른 사람에 의해 가려진 얼굴 fallback용
+ENABLE_OCCLUSION_FALLBACK = True
+
+# LivePortrait 합성 경계 완화
+ENABLE_MASK_BLEND = True
+SWAP_FEATHER_RATIO = 0.12
+
+# feather mask blur kernel
+# SWAP_MASK_BLUR_KERNEL과 얼굴 크기 * SWAP_FEATHER_RATIO 중 더 큰 값을 사용 (홀수)
+SWAP_MASK_BLUR_KERNEL = 31

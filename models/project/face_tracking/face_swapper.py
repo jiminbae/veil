@@ -7,6 +7,12 @@ from pathlib import Path
 import sys
 import logging
 
+from config import (
+    ENABLE_MASK_BLEND,
+    SWAP_FEATHER_RATIO,
+    SWAP_MASK_BLUR_KERNEL,
+)
+
 root_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(root_dir))
 
@@ -60,7 +66,11 @@ def blend_face(frame_bgr, swapped_face_bgr, bbox):
 
     mask = non_black_mask * ellipse_mask
 
-    blur_size = max(15, int(min(w, h) * 0.18))
+    if ENABLE_MASK_BLEND:
+        blur_size = max(SWAP_MASK_BLUR_KERNEL, int(min(w, h) * SWAP_FEATHER_RATIO))
+    else:
+        blur_size = 1
+
     blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
 
     mask = cv2.GaussianBlur(mask, (blur_size, blur_size), 0)
@@ -207,7 +217,11 @@ class LPProcessor:
         bx1, by1, bx2, by2 = bbox
         face_size = max(bx2 - bx1, by2 - by1)
 
-        blur_size = max(21, int(face_size * 0.08))
+        if ENABLE_MASK_BLEND:
+            blur_size = max(SWAP_MASK_BLUR_KERNEL, int(face_size * SWAP_FEATHER_RATIO))
+        else:
+            blur_size = 1
+
         blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
 
         pad = blur_size + 4
@@ -246,15 +260,19 @@ class LPProcessor:
         bx1, by1, bx2, by2 = bbox
         face_size = max(bx2 - bx1, by2 - by1)
 
-        erode_size = max(25, int(face_size * 0.18))
+        erode_size = max(11, int(face_size * 0.08))
         erode_size = erode_size if erode_size % 2 == 1 else erode_size + 1
 
-        blur_size = max(21, int(face_size * 0.08))
+        if ENABLE_MASK_BLEND:
+            blur_size = max(SWAP_MASK_BLUR_KERNEL, int(face_size * SWAP_FEATHER_RATIO))
+        else:
+            blur_size = 1
+
         blur_size = blur_size if blur_size % 2 == 1 else blur_size + 1
 
         mask_uint8 = (mask_roi * 255).clip(0, 255).astype(np.uint8)
         kernel = np.ones((erode_size, erode_size), np.uint8)
-        mask_uint8 = cv2.erode(mask_uint8, kernel, iterations=2)
+        mask_uint8 = cv2.erode(mask_uint8, kernel, iterations=1)
         mask_uint8 = cv2.GaussianBlur(mask_uint8, (blur_size, blur_size), 0)
 
         mask_roi = mask_uint8.astype(np.float32) / 255.0
