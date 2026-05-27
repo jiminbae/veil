@@ -1,19 +1,18 @@
 import cv2
 
 from config import (
-    LIVEPORTRAIT_MIN_FACE_AREA,
-    LIVEPORTRAIT_MIN_CROP_SIZE,
-    LIVEPORTRAIT_MAX_ASPECT_RATIO,
+    SWAP_MIN_FACE_AREA,
+    SWAP_MIN_CROP_SIZE,
+    SWAP_MAX_ASPECT_RATIO,
     EDGE_MARGIN,
-    LIVEPORTRAIT_MIN_FACE_SIZE,
-    LIVEPORTRAIT_MAX_FACE_AREA_RATIO,
+    SWAP_MIN_FACE_SIZE,
+    SWAP_MAX_FACE_AREA_RATIO,
     ENABLE_POSE_FALLBACK,
     SIDE_FACE_ASPECT_RATIO_THRESHOLD,
 )
 from face_utils import clip_bbox
 
 
-# 품질 판단
 def assess_face_quality(frame, bbox, embedding, crop):
     h, w = frame.shape[:2]
     x1, y1, x2, y2 = map(int, bbox)
@@ -26,7 +25,7 @@ def assess_face_quality(frame, bbox, embedding, crop):
     if box_w <= 0 or box_h <= 0:
         reasons.append("invalid_bbox")
         return "BAD", reasons
-    
+
     if embedding is None:
         reasons.append("embedding_failed")
 
@@ -38,34 +37,25 @@ def assess_face_quality(frame, bbox, embedding, crop):
         if aspect_ratio > SIDE_FACE_ASPECT_RATIO_THRESHOLD:
             reasons.append("side_face_or_unstable_pose")
 
-    if min(box_w, box_h) < LIVEPORTRAIT_MIN_FACE_SIZE:
+    if min(box_w, box_h) < SWAP_MIN_FACE_SIZE:
         reasons.append("small_face_size")
 
-    if area / frame_area > LIVEPORTRAIT_MAX_FACE_AREA_RATIO:
+    if area / frame_area > SWAP_MAX_FACE_AREA_RATIO:
         reasons.append("too_large_face")
 
-    # 얼굴 크기 부족
-    if area < LIVEPORTRAIT_MIN_FACE_AREA:
+    if area < SWAP_MIN_FACE_AREA:
         reasons.append("small_face")
 
-    # 비정상 비율 얼굴
-    if aspect_ratio > LIVEPORTRAIT_MAX_ASPECT_RATIO:
+    if aspect_ratio > SWAP_MAX_ASPECT_RATIO:
         reasons.append("bad_aspect_ratio")
 
-    # crop 실패
     if crop is None or crop.size == 0:
         reasons.append("crop_failed")
     else:
         crop_h, crop_w = crop.shape[:2]
-
-        # crop 크기 부족
-        if (
-            crop_w < LIVEPORTRAIT_MIN_CROP_SIZE
-            or crop_h < LIVEPORTRAIT_MIN_CROP_SIZE
-        ):
+        if crop_w < SWAP_MIN_CROP_SIZE or crop_h < SWAP_MIN_CROP_SIZE:
             reasons.append("small_crop")
 
-    # 프레임 가장자리 얼굴
     if (
         x1 <= EDGE_MARGIN
         or y1 <= EDGE_MARGIN
@@ -74,13 +64,12 @@ def assess_face_quality(frame, bbox, embedding, crop):
     ):
         reasons.append("near_frame_edge")
 
-    if len(reasons) > 0:
+    if reasons:
         return "BAD", reasons
 
     return "GOOD", reasons
 
 
-# Fallback blur
 def apply_fallback_blur(frame, bbox):
     clipped = clip_bbox(frame, bbox)
 
@@ -98,7 +87,7 @@ def apply_fallback_blur(frame, bbox):
 
     return frame
 
-# background crop 비동기 저장
+
 def save_background_crop(
     crop,
     stable_face_id,

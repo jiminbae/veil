@@ -125,6 +125,7 @@ def filter_detections(dets):
 
 
 def detect_faces_multiscale(frame, detector, device, frame_idx):
+    detector_device = normalize_tracker_device(device)
     h, w = frame.shape[:2]
     all_dets = []
 
@@ -133,7 +134,7 @@ def detect_faces_multiscale(frame, detector, device, frame_idx):
         conf=DETECTION_CONF,
         imgsz=FULL_DETECT_IMGSZ,
         verbose=False,
-        device=device,
+        device=detector_device,
     )[0]
 
     if full_result.boxes is not None:
@@ -170,7 +171,7 @@ def detect_faces_multiscale(frame, detector, device, frame_idx):
                 conf=DETECTION_CONF,
                 imgsz=TILE_DETECT_IMGSZ,
                 verbose=False,
-                device=device,
+                device=detector_device,
             )
 
             for result, (tx1, ty1) in zip(tile_results, tile_offsets):
