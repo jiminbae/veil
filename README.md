@@ -37,6 +37,7 @@ DL-project/
 ## Requirements
 
 - Python 3.10 or newer is recommended.
+- Python dependencies are managed in `models/project/requirements.txt`.
 - NVIDIA GPU + CUDA are recommended for practical runtime.
 - CPU execution is possible by setting `device = "cpu"` in `models/project/veil/config.py`, but it will be significantly slower.
 - TensorRT is included in `models/project/requirements.txt` as an optional ONNX Runtime acceleration path. VEIL falls back to CUDA or CPU providers when TensorRT is unavailable.
@@ -117,5 +118,5 @@ The main settings live in `models/project/veil/config.py`:
 
 - GPU execution is enabled by default through `device = "cuda"` in `config.py`.
 - ONNX Runtime uses the available provider stack, including TensorRT/CUDA when installed and available.
-- Model weights, videos, outputs, logs, and metadata are ignored by git.
+- Model weights, local input assets, outputs, logs, and metadata are ignored by git.
 - Use VEIL only with appropriate consent and for lawful, responsible video processing.
