@@ -66,6 +66,15 @@ checkpoints/
 *.webm
 *.flv
 
+
+# VEIL local inputs
+models/project/veil/target/*
+!models/project/veil/target/.gitkeep
+models/project/veil/virtual_face/*
+!models/project/veil/virtual_face/.gitkeep
+models/project/veil/videos/*
+!models/project/veil/videos/.gitkeep
+
 # Logs
 *.log
 *.txt
