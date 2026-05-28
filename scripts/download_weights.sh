@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-WEIGHTS_DIR="$ROOT_DIR/models/project/face_tracking/weights"
+WEIGHTS_DIR="$ROOT_DIR/models/project/veil/weights"
 MODEL_PATH="$WEIGHTS_DIR/yolo26x-face.pt"
 MODEL_URL="https://github.com/jiminbae/yolo26x-face/releases/download/v0.1.0/best.pt"
 INSWAPPER_PATH="$WEIGHTS_DIR/inswapper_128.onnx"
