@@ -147,7 +147,7 @@ def _build_ellipse_mask(frame_shape, bbox):
     return np.stack([mask] * 3, axis=-1).astype(np.float32) / 255.0
 
 
-def _build_mouth_mask(
+def _build_mouth_mask_roi(
     frame_shape,
     target_face,
     width_pad=MOUTH_WIDTH_PAD,
@@ -175,6 +175,20 @@ def _build_mouth_mask(
     ellipse_w = width * width_pad
     ellipse_h = width * height_ratio
 
+    rx = max(1, int(round(ellipse_w * 0.5)))
+    ry = max(1, int(round(ellipse_h * 0.5)))
+
+    b = blur_size if blur_size % 2 == 1 else blur_size + 1
+    pad = b + 2
+
+    x1 = max(0, int(np.floor(cx - rx - pad)))
+    y1 = max(0, int(np.floor(cy - ry - pad)))
+    x2 = min(W, int(np.ceil(cx + rx + pad)))
+    y2 = min(H, int(np.ceil(cy + ry + pad)))
+
+    if x2 <= x1 or y2 <= y1:
+        return None
+
     angle = float(
         np.degrees(
             np.arctan2(
@@ -184,15 +198,12 @@ def _build_mouth_mask(
         )
     )
 
-    mask = np.zeros((H, W), dtype=np.uint8)
+    mask = np.zeros((y2 - y1, x2 - x1), dtype=np.uint8)
 
     cv2.ellipse(
         mask,
-        (int(round(cx)), int(round(cy))),
-        (
-            max(1, int(round(ellipse_w * 0.5))),
-            max(1, int(round(ellipse_h * 0.5))),
-        ),
+        (int(round(cx - x1)), int(round(cy - y1))),
+        (rx, ry),
         angle,
         0,
         360,
@@ -200,10 +211,9 @@ def _build_mouth_mask(
         -1,
     )
 
-    b = blur_size if blur_size % 2 == 1 else blur_size + 1
-    mask = cv2.GaussianBlur(mask, (b, b), 0)
+    mask = cv2.GaussianBlur(mask, (b, b), 0).astype(np.float32) / 255.0
 
-    return mask.astype(np.float32) / 255.0
+    return x1, y1, x2, y2, mask
 
 
 class FaceSwapper:
@@ -359,14 +369,18 @@ class FaceSwapper:
                 )
 
                 if ENABLE_MOUTH_PASTE:
-                    mouth_mask = _build_mouth_mask(frame_bgr.shape, face)
+                    mouth_roi = _build_mouth_mask_roi(frame_bgr.shape, face)
 
-                    if mouth_mask is not None:
-                        m3 = np.stack([mouth_mask] * 3, axis=-1)
+                    if mouth_roi is not None:
+                        x1, y1, x2, y2, mouth_mask = mouth_roi
+                        result_bgr = swapped_bgr
+                        m3 = mouth_mask[:, :, None]
+                        original_roi = frame_bgr[y1:y2, x1:x2].astype(np.float32)
+                        swapped_roi = swapped_bgr[y1:y2, x1:x2].astype(np.float32)
 
-                        result_bgr = (
-                            m3 * frame_bgr.astype(np.float32)
-                            + (1.0 - m3) * swapped_bgr.astype(np.float32)
+                        result_bgr[y1:y2, x1:x2] = (
+                            m3 * original_roi
+                            + (1.0 - m3) * swapped_roi
                         ).astype(np.uint8)
                     else:
                         result_bgr = swapped_bgr

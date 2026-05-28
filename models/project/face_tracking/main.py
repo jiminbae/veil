@@ -15,7 +15,6 @@ from config import (
     TARGET_IMAGE_PATH,
     OUTPUT_PATH,
     LOG_PATH,
-    CROP_ROOT,
     METADATA_PATH,
     TRACKING_METADATA_PATH,
     SIM_THRESHOLD,
@@ -51,7 +50,6 @@ from metadata_manager import make_face_data, save_metadata
 def setup_dirs_and_logging():
     Path(OUTPUT_PATH).parent.mkdir(parents=True, exist_ok=True)
     Path(LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
-    Path(CROP_ROOT).mkdir(parents=True, exist_ok=True)
     Path(METADATA_PATH).parent.mkdir(parents=True, exist_ok=True)
     Path(TRACKING_METADATA_PATH).parent.mkdir(parents=True, exist_ok=True)
 
@@ -67,7 +65,6 @@ def setup_dirs_and_logging():
     logging.info(f"TARGET_DIR={TARGET_DIR}")
     logging.info(f"TARGET_PATTERN={TARGET_PATTERN}")
     logging.info(f"OUTPUT_PATH={OUTPUT_PATH}")
-    logging.info(f"CROP_ROOT={CROP_ROOT}")
     logging.info(f"METADATA_PATH={METADATA_PATH}")
     logging.info(f"TRACKING_METADATA_PATH={TRACKING_METADATA_PATH}")
     logging.info(f"SIM_THRESHOLD={SIM_THRESHOLD}")
@@ -732,13 +729,11 @@ def main():
     logging.info(f"Saved log to: {LOG_PATH}")
     logging.info(f"Saved face metadata to: {METADATA_PATH}")
     logging.info(f"Saved tracking metadata to: {tracking_metadata_path}")
-    #logging.info(f"Saved background crops to: {CROP_ROOT}")
 
     print(f"Saved result to: {OUTPUT_PATH}")
     print(f"Saved log to: {LOG_PATH}")
     print(f"Saved face metadata to: {METADATA_PATH}")
     print(f"Saved tracking metadata to: {tracking_metadata_path}")
-    #print(f"Saved background crops to: {CROP_ROOT}")
 
 if __name__ == "__main__":
     main()

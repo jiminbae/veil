@@ -17,7 +17,6 @@ from config import (
     LOG_PATH,
     METADATA_PATH,
     TRACKING_METADATA_PATH,
-    CROP_ROOT,
     SIM_THRESHOLD,
     SMOOTH_ALPHA,
     TARGET_HOLD_FRAMES,
@@ -94,7 +93,6 @@ def setup_dirs_and_logging():
     Path(LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
     Path(METADATA_PATH).parent.mkdir(parents=True, exist_ok=True)
     Path(TRACKING_METADATA_PATH).parent.mkdir(parents=True, exist_ok=True)
-    Path(CROP_ROOT).mkdir(parents=True, exist_ok=True)
 
     logging.basicConfig(
         filename=LOG_PATH,
@@ -589,7 +587,9 @@ def main():
                 f"SwapSuccessCount={sum(1 for v in swap_success_by_index.values() if v)} "
                 f"SwapBatchSize={FACE_SWAP_BATCH_SIZE} "
                 f"SwapElapsedSec={swap_elapsed:.4f} "
-                f"SwapInferenceSec={swap_timings['inference_sec']:.4f}"
+                f"SwapPrepareSec={swap_timings['prepare_sec']:.4f} "
+                f"SwapInferenceSec={swap_timings['inference_sec']:.4f} "
+                f"SwapPasteSec={swap_timings['paste_sec']:.4f}"
             )
 
         finalize_started = perf_counter()

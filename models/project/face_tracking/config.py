@@ -12,7 +12,6 @@ def _next_output_index():
         ("log", r"tracking_target(\d+)_log\.txt$"),
         ("metadata", r"face_metadata(\d+)\.json$"),
         ("metadata", r"tracking_metadata(\d+)\.json$"),
-        ("crop", r"crop(\d+)$"),
     )
     max_index = 0
 
