@@ -11,49 +11,48 @@ The pipeline also writes per-frame tracking metadata, face metadata, logs, and a
 ## Project Layout
 
 ```text
-DL-project/
+veil/
 ├── README.md
 ├── scripts/
 │   └── download_weights.sh
 └── models/
-    └── project/
-        ├── requirements.txt
-        ├── boxmot/
-        └── veil/
-            ├── main_hybrid.py
-            ├── config.py
-            ├── detector_tracker.py
-            ├── face_identifier.py
-            ├── face_inswapper.py
-            ├── metadata_manager.py
-            ├── crop_manager.py
-            ├── target/
-            ├── virtual_face/
-            ├── videos/
-            ├── weights/
-            └── outputs/
+    ├── requirements.txt
+    ├── boxmot/
+    └── veil/
+        ├── main_hybrid.py
+        ├── config.py
+        ├── detector_tracker.py
+        ├── face_identifier.py
+        ├── face_inswapper.py
+        ├── metadata_manager.py
+        ├── crop_manager.py
+        ├── target/
+        ├── virtual_face/
+        ├── videos/
+        ├── weights/
+        └── outputs/
 ```
 
 ## Requirements
 
 - Python 3.10 or newer is recommended.
-- Python dependencies are managed in `models/project/requirements.txt`.
+- Python dependencies are managed in `models/requirements.txt`.
 - NVIDIA GPU + CUDA are recommended for practical runtime.
-- CPU execution is possible by setting `device = "cpu"` in `models/project/veil/config.py`, but it will be significantly slower.
-- TensorRT is included in `models/project/requirements.txt` as an optional ONNX Runtime acceleration path. VEIL falls back to CUDA or CPU providers when TensorRT is unavailable.
+- CPU execution is possible by setting `device = "cpu"` in `models/veil/config.py`, but it will be significantly slower.
+- TensorRT is included in `models/requirements.txt` as an optional ONNX Runtime acceleration path. VEIL falls back to CUDA or CPU providers when TensorRT is unavailable.
 
 ## Setup
 
 ```bash
 git clone https://github.com/jiminbae/veil
-cd DL-project
+cd veil
 python -m venv .venv
 source .venv/bin/activate
-pip install -r models/project/requirements.txt
+pip install -r models/requirements.txt
 bash scripts/download_weights.sh
 ```
 
-`download_weights.sh` downloads the required model files into `models/project/veil/weights/`:
+`download_weights.sh` downloads the required model files into `models/veil/weights/`:
 
 - `yolo26x-face.pt`
 - `inswapper_128.onnx`
@@ -62,18 +61,18 @@ bash scripts/download_weights.sh
 
 Place your files in these paths before running the pipeline:
 
-- Input video: `models/project/veil/videos/test.mp4`
-- Protected target images: `models/project/veil/target/target*`
-- Replacement face image: `models/project/veil/virtual_face/fake_face.jpg`
+- Input video: `models/veil/videos/test.mp4`
+- Protected target images: `models/veil/target/target*`
+- Replacement face image: `models/veil/virtual_face/fake_face.jpg`
 
 Target images can be `.jpg`, `.jpeg`, `.png`, `.bmp`, or `.webp`. You can provide multiple target images as long as their filenames match `target*`.
 
-You can change these paths and thresholds in `models/project/veil/config.py`.
+You can change these paths and thresholds in `models/veil/config.py`.
 
 ## Run
 
 ```bash
-cd models/project/veil
+cd models/veil
 python main_hybrid.py
 ```
 
@@ -81,7 +80,7 @@ Each run automatically chooses the next output index by scanning the existing fi
 
 ## Outputs
 
-VEIL writes generated files under `models/project/veil/outputs/`:
+VEIL writes generated files under `models/veil/outputs/`:
 
 - Result video: `outputs/result/output_target{N}.mp4`
 - Runtime log: `outputs/log/tracking_target{N}_log.txt`
@@ -92,7 +91,7 @@ The metadata files include frame numbers, raw track IDs, stable face IDs, boundi
 
 ## Configuration
 
-The main settings live in `models/project/veil/config.py`:
+The main settings live in `models/veil/config.py`:
 
 - `VIDEO_PATH`: input video path.
 - `TARGET_DIR` and `TARGET_PATTERN`: protected identity image gallery.

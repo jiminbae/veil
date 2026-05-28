@@ -68,12 +68,12 @@ checkpoints/
 
 
 # VEIL local inputs
-models/project/veil/target/*
-!models/project/veil/target/.gitkeep
-models/project/veil/virtual_face/*
-!models/project/veil/virtual_face/.gitkeep
-models/project/veil/videos/*
-!models/project/veil/videos/.gitkeep
+models/veil/target/*
+!models/veil/target/.gitkeep
+models/veil/virtual_face/*
+!models/veil/virtual_face/.gitkeep
+models/veil/videos/*
+!models/veil/videos/.gitkeep
 
 # Logs
 *.log
