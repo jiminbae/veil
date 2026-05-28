@@ -25,6 +25,9 @@ BBOX_FALLBACK_MAX_AGE = 30
 BBOX_FALLBACK_IOU_THRESHOLD = 0.35
 BBOX_FALLBACK_CENTER_RATIO = 0.75
 TRACK_REUSE_THRESHOLD_RATIO = 0.85
+IDENTITY_MIN_ASPECT_RATIO = 0.55
+IDENTITY_MAX_ASPECT_RATIO = 1.8
+IDENTITY_MIN_AREA_RATIO = 0.35
 
 def can_load_tensorrt_runtime():
     search_dirs = [Path(sysconfig.get_paths()["purelib"]) / "tensorrt_libs"]
@@ -109,6 +112,40 @@ def is_too_small_for_identity(box):
 
     return bw <= 0 or bh <= 0 or min(bw, bh) < ID_MIN_FACE_SIZE
 
+def is_invalid_identity_bbox(box, prev_box=None):
+    x1, y1, x2, y2 = map(int, box)
+
+    bw = x2 - x1
+    bh = y2 - y1
+
+    if bw <= 0 or bh <= 0:
+        return True
+
+    if min(bw, bh) < ID_MIN_FACE_SIZE:
+        return True
+
+    aspect_ratio = bw / max(bh, 1)
+
+    if (
+        aspect_ratio < IDENTITY_MIN_ASPECT_RATIO
+        or aspect_ratio > IDENTITY_MAX_ASPECT_RATIO
+    ):
+        return True
+
+    if prev_box is not None:
+        px1, py1, px2, py2 = map(int, prev_box)
+
+        pw = px2 - px1
+        ph = py2 - py1
+
+        if pw > 0 and ph > 0:
+            cur_area = bw * bh
+            prev_area = pw * ph
+
+            if cur_area < prev_area * IDENTITY_MIN_AREA_RATIO:
+                return True
+
+    return False
 
 # 임베딩 추출
 def get_arcface_embedding(frame, box):
@@ -168,11 +205,20 @@ def get_arcface_embedding(frame, box):
 
 # Track embedding 캐시
 def get_track_embedding(frame, box, track_id, current_frame):
-    if is_too_small_for_identity(box):
-        return None, None, False
-
     cached_emb = track_last_emb.get(track_id)
     cached_kps = track_last_kps.get(track_id)
+
+    prev_box = None
+
+    if track_id in track_to_face:
+        stable_id = track_to_face[track_id]
+        prev_box = face_last_bbox.get(stable_id)
+
+    if is_invalid_identity_bbox(box, prev_box):
+        if cached_emb is not None:
+            return cached_emb, cached_kps, False
+
+        return None, None, False
 
     should_refresh = (
         cached_emb is None
@@ -185,6 +231,9 @@ def get_track_embedding(frame, box, track_id, current_frame):
     emb, kps = get_arcface_embedding(frame, box)
 
     if emb is None:
+        if cached_emb is not None:
+            return cached_emb, cached_kps, False
+
         return None, None, False
 
     track_last_emb[track_id] = emb
@@ -363,7 +412,13 @@ def assign_stable_face_id(track_id, embedding, current_frame, bbox=None):
                 update_gallery_embedding(stable_id, embedding)
                 face_last_seen[stable_id] = current_frame
 
-                if bbox is not None:
+                if (
+                    bbox is not None
+                    and not is_invalid_identity_bbox(
+                        bbox,
+                        face_last_bbox.get(stable_id),
+                    )
+                ):
                     face_last_bbox[stable_id] = bbox
 
                 return stable_id
@@ -406,7 +461,13 @@ def assign_stable_face_id(track_id, embedding, current_frame, bbox=None):
 
     face_last_seen[stable_id] = current_frame
 
-    if bbox is not None:
+    if (
+        bbox is not None
+        and not is_invalid_identity_bbox(
+            bbox,
+            face_last_bbox.get(stable_id),
+        )
+    ):
         face_last_bbox[stable_id] = bbox
 
     track_to_face[track_id] = stable_id
@@ -492,7 +553,7 @@ def find_bbox_fallback_face_id(bbox, current_frame):
 
 
 def assign_bbox_fallback(track_id, bbox, current_frame):
-    if bbox is None or is_too_small_for_identity(bbox):
+    if bbox is None or is_invalid_identity_bbox(bbox):
         return None
 
     fallback_id = find_bbox_fallback_face_id(bbox, current_frame)
@@ -530,6 +591,9 @@ def smooth_bbox(face_id, bbox, alpha=SMOOTH_ALPHA):
     )
 
     if should_reset:
+        if is_invalid_identity_bbox(bbox, prev_bbox):
+            return prev_bbox.astype(int)
+
         bbox_smoother[face_id] = bbox
         return bbox.astype(int)
 
