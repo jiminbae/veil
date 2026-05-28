@@ -1,22 +1,121 @@
-# DL-project
+# VEIL: Video Face Exchange with Identity Locking
+
+VEIL is a target-aware video face-swap pipeline that preserves selected target identities and replaces non-target faces in video using face detection, tracking, recognition, and InSwapper.
+
+## What VEIL Does
+
+VEIL processes an input video frame by frame. It detects faces with YOLO, tracks them with BoT-SORT, identifies protected target people with InsightFace/ArcFace embeddings, and swaps only non-target faces with a configured virtual face. Target identities are left unchanged.
+
+The pipeline also writes per-frame tracking metadata, face metadata, logs, and an annotated output video. When a non-target face is too small, occluded, or otherwise unsuitable for swapping, VEIL falls back to blur instead of forcing a low-quality swap.
+
+## Project Layout
+
+```text
+DL-project/
+├── README.md
+├── scripts/
+│   └── download_weights.sh
+└── models/
+    └── project/
+        ├── requirements.txt
+        ├── boxmot/
+        └── veil/
+            ├── main_hybrid.py
+            ├── config.py
+            ├── detector_tracker.py
+            ├── face_identifier.py
+            ├── face_inswapper.py
+            ├── metadata_manager.py
+            ├── crop_manager.py
+            ├── target/
+            ├── virtual_face/
+            ├── videos/
+            ├── weights/
+            └── outputs/
+```
+
+## Requirements
+
+- Python 3.10 or newer is recommended.
+- NVIDIA GPU + CUDA are recommended for practical runtime.
+- CPU execution is possible by setting `device = "cpu"` in `models/project/veil/config.py`, but it will be significantly slower.
+- TensorRT is included in `models/project/requirements.txt` as an optional ONNX Runtime acceleration path. VEIL falls back to CUDA or CPU providers when TensorRT is unavailable.
 
 ## Setup
 
 ```bash
-git clone --recurse-submodules https://github.com/jiminbae/DL-project
+git clone https://github.com/jiminbae/DL-project
 cd DL-project
+python -m venv .venv
+source .venv/bin/activate
+pip install -r models/project/requirements.txt
 bash scripts/download_weights.sh
 ```
 
-`download_weights.sh` downloads the required model files into
-`models/project/face_tracking/weights/`:
+`download_weights.sh` downloads the required model files into `models/project/veil/weights/`:
 
 - `yolo26x-face.pt`
 - `inswapper_128.onnx`
 
-Run the updated face-swapping pipeline with:
+## Inputs
+
+Place your files in these paths before running the pipeline:
+
+- Input video: `models/project/veil/videos/test.mp4`
+- Protected target images: `models/project/veil/target/target*`
+- Replacement face image: `models/project/veil/virtual_face/fake_face.jpg`
+
+Target images can be `.jpg`, `.jpeg`, `.png`, `.bmp`, or `.webp`. You can provide multiple target images as long as their filenames match `target*`.
+
+You can change these paths and thresholds in `models/project/veil/config.py`.
+
+## Run
 
 ```bash
-cd models/project/face_tracking
+cd models/project/veil
 python main_hybrid.py
 ```
+
+Each run automatically chooses the next output index by scanning the existing files under `outputs/`.
+
+## Outputs
+
+VEIL writes generated files under `models/project/veil/outputs/`:
+
+- Result video: `outputs/result/output_target{N}.mp4`
+- Runtime log: `outputs/log/tracking_target{N}_log.txt`
+- Face metadata: `outputs/metadata/face_metadata{N}.json`
+- Tracking metadata: `outputs/metadata/tracking_metadata{N}.json`
+
+The metadata files include frame numbers, raw track IDs, stable face IDs, bounding boxes, target match status, similarity scores, quality labels, and fallback reasons.
+
+## Configuration
+
+The main settings live in `models/project/veil/config.py`:
+
+- `VIDEO_PATH`: input video path.
+- `TARGET_DIR` and `TARGET_PATTERN`: protected identity image gallery.
+- `TARGET_IMAGE_PATH`: replacement face image used by InSwapper.
+- `ENABLE_FACE_SWAP`: turn face swapping on or off.
+- `MAX_SWAP_FACES_PER_FRAME`: cap the number of non-target faces swapped per frame.
+- `SIM_THRESHOLD` and `TARGET_THRESHOLD`: identity matching thresholds.
+- `FACE_SWAP_BATCH_SIZE`: batch size used by the swap stage.
+- `USE_BOTSORT_REID`: enable or disable BoT-SORT ReID features.
+
+## Pipeline Summary
+
+1. Detect faces using YOLO face weights.
+2. Track face boxes across frames with BoT-SORT.
+3. Extract face embeddings with InsightFace/ArcFace.
+4. Match tracked faces against target images.
+5. Preserve target identities.
+6. Swap eligible non-target faces using `inswapper_128.onnx`.
+7. Apply blur fallback when swap quality would be unreliable.
+8. Save output video, logs, and metadata.
+
+## Notes
+
+- GPU execution is enabled by default through `device = "cuda"` in `config.py`.
+- ONNX Runtime uses the available provider stack, including TensorRT/CUDA when installed and available.
+- Model weights, videos, outputs, logs, and metadata are ignored by git.
+- Use VEIL only with appropriate consent and for lawful, responsible video processing.
