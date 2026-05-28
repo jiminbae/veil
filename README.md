@@ -45,7 +45,7 @@ DL-project/
 ## Setup
 
 ```bash
-git clone https://github.com/jiminbae/DL-project
+git clone https://github.com/jiminbae/veil
 cd DL-project
 python -m venv .venv
 source .venv/bin/activate
