@@ -1,5 +1,7 @@
 import cv2
 import logging
+import queue
+import threading
 from time import perf_counter
 from pathlib import Path
 
@@ -40,6 +42,7 @@ from face_identifier import (
     smooth_bbox,
     target_face_ids,
     target_track_ids,
+    FACE_PROVIDERS,
 )
 from crop_manager import assess_face_quality, apply_fallback_blur
 from metadata_manager import make_face_data, save_metadata
@@ -47,6 +50,43 @@ from metadata_manager import make_face_data, save_metadata
 
 target_last_seen = {}
 swap_patch_cache = {}
+
+
+class AsyncVideoWriter:
+    def __init__(self, writer, max_queue_size=16):
+        self._writer = writer
+        self._queue = queue.Queue(maxsize=max_queue_size)
+        self._error = None
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def _run(self):
+        while True:
+            frame = self._queue.get()
+            try:
+                if frame is None:
+                    return
+
+                self._writer.write(frame)
+            except Exception as exc:
+                self._error = exc
+            finally:
+                self._queue.task_done()
+
+    def write(self, frame):
+        if self._error is not None:
+            raise RuntimeError("Async video writer failed") from self._error
+
+        self._queue.put(frame)
+
+    def release(self):
+        self._queue.put(None)
+        self._queue.join()
+        self._thread.join()
+        self._writer.release()
+
+        if self._error is not None:
+            raise RuntimeError("Async video writer failed") from self._error
 
 
 def setup_dirs_and_logging():
@@ -78,6 +118,7 @@ def setup_dirs_and_logging():
     logging.info(f"EMBEDDING_REFRESH_INTERVAL={EMBEDDING_REFRESH_INTERVAL}")
     logging.info(f"LOG_EVERY_N_FRAMES={LOG_EVERY_N_FRAMES}")
     logging.info(f"FACE_SWAP_BATCH_SIZE={FACE_SWAP_BATCH_SIZE}")
+    logging.info(f"ONNXRuntime providers={FACE_PROVIDERS}")
     logging.info("Swap engine=inswapper_128.onnx")
 
 
@@ -408,9 +449,11 @@ def main():
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    out = cv2.VideoWriter(OUTPUT_PATH, fourcc, fps, (width, height))
-    if not out.isOpened():
+    raw_out = cv2.VideoWriter(OUTPUT_PATH, fourcc, fps, (width, height))
+    if not raw_out.isOpened():
         raise RuntimeError(f"Cannot open VideoWriter: {OUTPUT_PATH}")
+
+    out = AsyncVideoWriter(raw_out)
 
     current_frame_idx = 0
     all_face_metadata = []

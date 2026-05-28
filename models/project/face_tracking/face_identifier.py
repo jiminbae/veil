@@ -1,3 +1,5 @@
+import ctypes
+import sysconfig
 import cv2
 import numpy as np
 from pathlib import Path
@@ -24,11 +26,49 @@ BBOX_FALLBACK_IOU_THRESHOLD = 0.35
 BBOX_FALLBACK_CENTER_RATIO = 0.75
 TRACK_REUSE_THRESHOLD_RATIO = 0.85
 
+def can_load_tensorrt_runtime():
+    search_dirs = [Path(sysconfig.get_paths()["purelib"]) / "tensorrt_libs"]
+    library_names = (
+        "libnvinfer.so.10",
+        "libnvinfer_plugin.so.10",
+        "libnvonnxparser.so.10",
+    )
+
+    for search_dir in search_dirs:
+        if not search_dir.exists():
+            continue
+
+        try:
+            for library_name in library_names:
+                ctypes.CDLL(str(search_dir / library_name), mode=ctypes.RTLD_GLOBAL)
+            return True
+        except OSError:
+            continue
+
+    try:
+        ctypes.CDLL("libnvinfer.so.10", mode=ctypes.RTLD_GLOBAL)
+        return True
+    except OSError:
+        return False
+
+
 def get_face_analysis_runtime():
     if hasattr(ort, "preload_dlls"):
         ort.preload_dlls()
 
     available_providers = ort.get_available_providers()
+
+    if (
+        "TensorrtExecutionProvider" in available_providers
+        and can_load_tensorrt_runtime()
+    ):
+        providers = ["TensorrtExecutionProvider"]
+
+        if "CUDAExecutionProvider" in available_providers:
+            providers.append("CUDAExecutionProvider")
+
+        providers.append("CPUExecutionProvider")
+        return providers, 0
 
     if "CUDAExecutionProvider" in available_providers:
         return ["CUDAExecutionProvider", "CPUExecutionProvider"], 0

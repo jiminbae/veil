@@ -8,6 +8,7 @@ ultralytics>=8.0.0
 insightface>=0.7.3
 boxmot>=10.0.0
 onnxruntime-gpu>=1.16.0
+tensorrt-cu12==10.16.1.11
 
 # Image & Video Processing
 opencv-python>=4.8.0
