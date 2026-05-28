@@ -20,6 +20,26 @@ try:
 except ImportError:
     INSWAPPER_DET_SIZE = (640, 640)
 
+try:
+    from config import ENABLE_MOUTH_PASTE
+except ImportError:
+    ENABLE_MOUTH_PASTE = True
+
+try:
+    from config import MOUTH_WIDTH_PAD
+except ImportError:
+    MOUTH_WIDTH_PAD = 1.3
+
+try:
+    from config import MOUTH_HEIGHT_RATIO
+except ImportError:
+    MOUTH_HEIGHT_RATIO = 0.75
+
+try:
+    from config import MOUTH_BLUR_SIZE
+except ImportError:
+    MOUTH_BLUR_SIZE = 31
+
 
 def _iou(boxA, boxB):
     ax1, ay1, ax2, ay2 = boxA
@@ -125,6 +145,65 @@ def _build_ellipse_mask(frame_shape, bbox):
     mask = cv2.GaussianBlur(mask, (blur_size, blur_size), 0)
 
     return np.stack([mask] * 3, axis=-1).astype(np.float32) / 255.0
+
+
+def _build_mouth_mask(
+    frame_shape,
+    target_face,
+    width_pad=MOUTH_WIDTH_PAD,
+    height_ratio=MOUTH_HEIGHT_RATIO,
+    blur_size=MOUTH_BLUR_SIZE,
+):
+    H, W = frame_shape[:2]
+
+    kps = getattr(target_face, "kps", None)
+    if kps is None or len(kps) < 5:
+        return None
+
+    kps = np.asarray(kps, dtype=np.float32)
+
+    mouth_l = kps[3]
+    mouth_r = kps[4]
+
+    cx = float((mouth_l[0] + mouth_r[0]) * 0.5)
+    cy = float((mouth_l[1] + mouth_r[1]) * 0.5)
+
+    width = float(np.linalg.norm(mouth_r - mouth_l))
+    if width < 4:
+        return None
+
+    ellipse_w = width * width_pad
+    ellipse_h = width * height_ratio
+
+    angle = float(
+        np.degrees(
+            np.arctan2(
+                mouth_r[1] - mouth_l[1],
+                mouth_r[0] - mouth_l[0],
+            )
+        )
+    )
+
+    mask = np.zeros((H, W), dtype=np.uint8)
+
+    cv2.ellipse(
+        mask,
+        (int(round(cx)), int(round(cy))),
+        (
+            max(1, int(round(ellipse_w * 0.5))),
+            max(1, int(round(ellipse_h * 0.5))),
+        ),
+        angle,
+        0,
+        360,
+        255,
+        -1,
+    )
+
+    b = blur_size if blur_size % 2 == 1 else blur_size + 1
+    mask = cv2.GaussianBlur(mask, (b, b), 0)
+
+    return mask.astype(np.float32) / 255.0
 
 
 class FaceSwapper:
@@ -271,12 +350,29 @@ class FaceSwapper:
 
             try:
                 inf_started = perf_counter()
-                result_bgr = self._swapper.get(
+
+                swapped_bgr = self._swapper.get(
                     result_bgr,
                     face,
                     self._source_face,
                     paste_back=True,
                 )
+
+                if ENABLE_MOUTH_PASTE:
+                    mouth_mask = _build_mouth_mask(frame_bgr.shape, face)
+
+                    if mouth_mask is not None:
+                        m3 = np.stack([mouth_mask] * 3, axis=-1)
+
+                        result_bgr = (
+                            m3 * frame_bgr.astype(np.float32)
+                            + (1.0 - m3) * swapped_bgr.astype(np.float32)
+                        ).astype(np.uint8)
+                    else:
+                        result_bgr = swapped_bgr
+                else:
+                    result_bgr = swapped_bgr
+
                 inference_elapsed += perf_counter() - inf_started
 
                 paste_started = perf_counter()
