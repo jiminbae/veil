@@ -10,7 +10,7 @@ The pipeline also writes per-frame tracking metadata, face metadata, logs, and a
 
 ## Demo
 
-Source video: [Pixabay](https://pixabay.com/ko/videos/%EA%B3%A8%EB%AA%A9-%EC%82%AC%EB%9E%8C%EB%93%A4-%EA%B1%B7%EB%8B%A4-%EA%B1%B0%EB%A6%AC-39837/)
+Source video: [Magnific](https://www.magnific.com/free-video/two-women-doing-makeup-tutorial_3696427#fromView=search&page=1&position=27&uuid=ed77d5e3-7d98-416e-95bc-fca3aee8556b)
 
 Virtual face source: [This Person Does Not Exist](https://thispersondoesnotexist.com/)
 
