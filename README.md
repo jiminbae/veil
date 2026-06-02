@@ -138,3 +138,11 @@ The main settings live in `models/veil/config.py`:
 - ONNX Runtime uses the available provider stack, including TensorRT/CUDA when installed and available.
 - Model weights, local input assets, outputs, logs, and metadata are ignored by git.
 - Use VEIL only with appropriate consent and for lawful, responsible video processing.
+
+## Developers
+
+- [jiminbae](https://github.com/jiminbae)
+- [TELLEGIT](https://github.com/TELLEGIT)
+- [creatingweb123](https://github.com/creatingweb123)
+- [jin23bsj](https://github.com/jin23bsj)
+
