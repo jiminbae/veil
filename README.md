@@ -31,17 +31,23 @@ Virtual face source: [This Person Does Not Exist](https://thispersondoesnotexist
 ```text
 veil/
 ├── README.md
+├── media/
+│   ├── input_test.gif
+│   ├── fake_face.jpg
+│   └── output_target5.gif
 ├── scripts/
 │   └── download_weights.sh
 └── models/
     ├── requirements.txt
     ├── boxmot/
+    │   └── models/
     └── veil/
         ├── main_hybrid.py
         ├── config.py
         ├── detector_tracker.py
         ├── face_identifier.py
         ├── face_inswapper.py
+        ├── face_utils.py
         ├── metadata_manager.py
         ├── crop_manager.py
         ├── target/
@@ -58,7 +64,8 @@ veil/
 - Python dependencies are managed in `models/requirements.txt`.
 - NVIDIA GPU + CUDA are recommended for practical runtime.
 - CPU execution is possible by setting `device = "cpu"` in `models/veil/config.py`, but it will be significantly slower.
-- TensorRT is included in `models/requirements.txt` as an optional ONNX Runtime acceleration path. VEIL falls back to CUDA or CPU providers when TensorRT is unavailable.
+- `models/requirements.txt` includes ONNX Runtime GPU, CUDA, and TensorRT-related packages. VEIL uses the available provider stack and falls back when a provider is unavailable.
+- `curl` or `wget` is required for `scripts/download_weights.sh`.
 
 ## Setup
 
@@ -76,6 +83,8 @@ bash scripts/download_weights.sh
 - `yolo26x-face.pt`
 - `inswapper_128.onnx`
 
+The BoT-SORT ReID weight is stored at `models/boxmot/models/osnet_x0_25_msmt17.pt`.
+
 ## Inputs
 
 Place your files in these paths before running the pipeline:
@@ -85,6 +94,8 @@ Place your files in these paths before running the pipeline:
 - Replacement face image: `models/veil/virtual_face/fake_face.jpg`
 
 Target images can be `.jpg`, `.jpeg`, `.png`, `.bmp`, or `.webp`. You can provide multiple target images as long as their filenames match `target*`.
+
+Use clear target images where the protected person's face is visible and easy to detect. The replacement face image should also contain one clear face, preferably front-facing or near front-facing.
 
 You can change these paths and thresholds in `models/veil/config.py`.
 
@@ -101,12 +112,12 @@ Each run automatically chooses the next output index by scanning the existing fi
 
 VEIL writes generated files under `models/veil/outputs/`:
 
-- Result video: `outputs/result/output_target{N}.mp4`
+- Annotated result video: `outputs/result/output_target{N}.mp4`
 - Runtime log: `outputs/log/tracking_target{N}_log.txt`
 - Face metadata: `outputs/metadata/face_metadata{N}.json`
 - Tracking metadata: `outputs/metadata/tracking_metadata{N}.json`
 
-The metadata files include frame numbers, raw track IDs, stable face IDs, bounding boxes, target match status, similarity scores, quality labels, and fallback reasons.
+The result video includes face boxes and labels. The metadata files include frame numbers, raw track IDs, stable face IDs, bounding boxes, target match status, similarity scores, quality labels, and fallback reasons.
 
 ## Configuration
 
@@ -120,6 +131,9 @@ The main settings live in `models/veil/config.py`:
 - `SIM_THRESHOLD` and `TARGET_THRESHOLD`: identity matching thresholds.
 - `FACE_SWAP_BATCH_SIZE`: batch size used by the swap stage.
 - `USE_BOTSORT_REID`: enable or disable BoT-SORT ReID features.
+- `DETECTION_CONF`: face detection confidence threshold.
+- `SWAP_MIN_FACE_SIZE` and `SWAP_MAX_FACE_AREA_RATIO`: decide when a detected face is suitable for swapping.
+- `ENABLE_MOUTH_PASTE`: keeps the original mouth area when blending a swapped face.
 
 ## Pipeline Summary
 
@@ -132,11 +146,18 @@ The main settings live in `models/veil/config.py`:
 7. Apply blur fallback when swap quality would be unreliable.
 8. Save output video, logs, and metadata.
 
+## Troubleshooting
+
+- `No target images found`: add at least one image whose filename starts with `target` under `models/veil/target/`.
+- `No valid target embeddings loaded`: the target image exists, but no face was detected. Try a clearer face image.
+- `Cannot open video`: check that the input video exists at `models/veil/videos/test.mp4`, or update `VIDEO_PATH` in `config.py`.
+- `Cannot read target image`: check `models/veil/virtual_face/fake_face.jpg`, or update `TARGET_IMAGE_PATH` in `config.py`.
+
 ## Notes
 
 - GPU execution is enabled by default through `device = "cuda"` in `config.py`.
 - ONNX Runtime uses the available provider stack, including TensorRT/CUDA when installed and available.
-- Model weights, local input assets, outputs, logs, and metadata are ignored by git.
+- Downloaded model weights, local input assets, outputs, logs, and metadata are ignored by git.
 - Use VEIL only with appropriate consent and for lawful, responsible video processing.
 
 ## Developers
