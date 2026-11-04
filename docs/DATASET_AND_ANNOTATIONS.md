@@ -91,9 +91,14 @@ secondary source separate from Panoptic aggregates.
 
 Archived clips include side profiles, occlusions, small faces and the six known
 historical target-alteration cases. These stay in the primary cohort. Historical
-review CSVs are retained for difficult-case provenance. Missing rejected-candidate
-source/crop records prevent reconstructing an additional independent stress cohort
-without guessing; the stress subset of the primary population is not a held-out
+review CSVs are retained for difficult-case provenance. All nine rejected source
+intervals were recovered from the retained summary IDs and decoded successfully.
+Their manifest and browser review page are separate. Seven were rejected for
+reference quality/pose and two for historical camera blipping. Successful decoding
+does not prove the camera imagery is free of glitches. Original rejected crops and
+protected identities were not retained, so faithful target-aware stress processing
+is pending target registration/provenance review. No guessed target or fabricated
+stress metric is supplied; this is a recovered-input companion, not a held-out
 test. AVA was reviewed as an alternative, but its YouTube video IDs and person
 boxes do not themselves establish video redistribution rights or face GT.
 

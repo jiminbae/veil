@@ -61,6 +61,14 @@ def aggregate(output,resamples=2000):
     output=Path(output);clips=read_csv(output/'per_clip_metrics.csv');runtime=read_csv(output/'runtime_metrics.csv')
     runtime_map={(r['condition'],r['clip_id']):r for r in runtime}
     rows=[r for r in clips if r['status']=='completed']
+    required=set()
+    for numerator,denominator in METRICS.values():
+        required.update(numerator if isinstance(numerator,tuple) else [numerator])
+        required.add(denominator)
+    for row in rows:
+        missing=[key for key in required if key not in row or number(row[key]) is None]
+        if missing:
+            raise ValueError(f'Cannot substitute zero for unavailable count fields: {row["clip_id"]} {missing}')
     for r in rows:
         r['recording_day']=r['sequence'].split('_')[0]
         r['end_to_end_fps']=runtime_map[(r['condition'],r['clip_id'])]['end_to_end_fps']
@@ -141,6 +149,33 @@ def aggregate(output,resamples=2000):
                     aggregates.append({'condition':condition,'metric':'accept_rate_upper_bound_all_attempts',
                         'backend':backend,'group':group,'aggregation':'micro','value':ratio(accepted+failures,attempts),
                         'numerator':accepted+failures,'denominator':attempts,'clips':len(selected)})
+        verifier_lookup={(r['condition'],r['clip_id'],r['backend'],r['group']):r for r in verifier}
+        for comparison in CONDITIONS[1:]:
+            for backend in ['adaface','facenet']:
+                for group in ['target','non_target']:
+                    for metric in ['accept_rate_successful_pairs','accept_rate_lower_bound_all_attempts','accept_rate_upper_bound_all_attempts']:
+                        pairs=[]
+                        for full in [r for r in verifier if r['condition']=='full' and r['backend']==backend and r['group']==group]:
+                            other=verifier_lookup.get((comparison,full['clip_id'],backend,group))
+                            if other is None:continue
+                            av=number(full.get(metric));bv=number(other.get(metric))
+                            if av is None or bv is None:continue
+                            pair={'reference':'full','comparison':comparison,'clip_id':full['clip_id'],'sequence':full['sequence'],
+                                'backend':backend,'group':group,'metric':metric,'reference_value':av,'comparison_value':bv,
+                                'delta_full_minus_comparison':av-bv,'reference_attempts':full['attempts'],
+                                'comparison_attempts':other['attempts'],'reference_scored':full['score_successes'],
+                                'comparison_scored':other['score_successes'],
+                                'denominator_note':'same clips; conditional score subsets can differ; all-attempt bounds retain extraction failures'}
+                            pairs.append(pair);paired.append(pair)
+                        lo,hi,n=cluster_interval(pairs,lambda r:r['delta_full_minus_comparison'],resamples=resamples)
+                        intervals.append({'condition':'full - '+comparison,'metric':metric,'backend':backend,'group':group,
+                            'aggregation':'paired_clip_macro','cluster_unit':'sequence','clusters':n,'clips':len(pairs),
+                            'lower_95':lo,'upper_95':hi,'estimate':float(np.mean([r['delta_full_minus_comparison'] for r in pairs])) if pairs else None,
+                            'method':'paired percentile cluster bootstrap','resamples':resamples,'seed':20261104})
+                        for omitted in sorted({r['sequence'] for r in pairs}):
+                            values=[r['delta_full_minus_comparison'] for r in pairs if r['sequence']!=omitted]
+                            sensitivity.append({'comparison':comparison,'backend':backend,'group':group,'metric':metric,
+                                'omitted_sequence':omitted,'remaining_clips':len(values),'mean_delta':float(np.mean(values)) if values else None})
         people=read_csv(output/'independent_identity_verifier/per_identity_verifier_metrics.csv')
         for condition in CONDITIONS:
             for backend in ['adaface','facenet']:

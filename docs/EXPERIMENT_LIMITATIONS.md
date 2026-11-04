@@ -14,7 +14,10 @@ below. Execution and annotation validation have separate completion states.
    and original rendered outputs are absent. Four manual target replacements
    cannot be proven recoverable from the recorded crops. New PNG references and
    source clips are reconstruction inputs. The new replacement is the existing
-   tracked synthetic demo face. Historical result files remain unchanged.
+   tracked synthetic demo face. Historical result files remain unchanged. Nine
+   rejected source intervals were recovered and decoded; original target
+   identities/rejected crops are absent, so faithful stress processing remains
+   pending instead of silently registering a different easier person.
 3. **Historical 20 is development evidence.** Its clips and known failures were
    previously inspected. Adding the arbitrary excluded interval repairs that
    exclusion but does not create an unseen test set. Differences from historical
@@ -23,7 +26,9 @@ below. Execution and annotation validation have separate completion states.
 4. **Verification has a defined threat model.** AdaFace and FaceNet are independent
    of VEIL's buffalo_l recognizer. Non-target same-frame source/output comparison
    gives the attacker original pixels. It is not a conventional separate-photo
-   enrollment test. Every fifth frame is sampled; any-frame and pooled attacks
+   enrollment test. Target references come from each clip's own midpoint; this
+   is not a cross-session enrollment study. Every fifth frame is sampled;
+   any-frame and pooled attacks
    only cover those observations. Body, clothes, voice and context are outside
    scope. No claim of zero face-based re-identification follows from system logs.
 5. **Failed extraction is unknown.** Conditional successful-pair acceptance can
