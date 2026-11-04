@@ -71,6 +71,9 @@ below. Execution and annotation validation have separate completion states.
     Download, integrity decoding and verification are excluded from processing
     FPS but included in research-workflow elapsed-time records. No real-time
     deployment claim is made.
+    Conditions were run in a fixed order, once per clip, without randomized-order
+    repeats or a hardware cold-cache reset. Per-clip distributions and paired
+    differences do not isolate thermal/order/cache effects.
 12. **Optional external baseline remains unavailable.** Official DeepPrivacy2
     code and checkpoint policy were inspected. Its unchanged setup pins SciPy
     1.7.1 and Pillow 8.3.1 plus an old Detectron2/DensePose revision. The exact

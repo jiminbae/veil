@@ -78,6 +78,7 @@ models/veil/videos/*
 # Logs
 *.log
 *.txt
+!models/requirements-research.txt
 
 # Evaluation Results & Outputs
 evaluation_results/

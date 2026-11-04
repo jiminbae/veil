@@ -159,6 +159,10 @@ file; no model-assisted inspection is counted as human validation.
 Use a fresh evaluation result directory with the reviewed annotations. Partial
 review verifies only the explicitly reviewed observations. Preserve the original
 unverified run and correction audit trail.
+If review changes the registered target image or intended protected identity,
+rerender all six conditions for the affected clips under a fresh run ID. Changing
+only evaluation annotations requires evaluation/scoring reruns, not unchanged
+video rendering. Never silently replace references in the recorded run.
 
 ## Secondary source
 

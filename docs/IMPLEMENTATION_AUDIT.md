@@ -27,6 +27,7 @@ new provenance receipt. None is relabeled as a corrected-code result.
 | Result reuse | Previously only output existence was checked. Completed receipts now require code/config/input/reference/replacement/model/output hashes |
 | Destructive retries | Runner deleted previous paths; now refuses overwrite. Legacy Panoptic-10 wrapper defaults to unique run directories and no longer deletes old results |
 | Partial weight download | Previous downloader trusted any nonempty file. Interrupted YOLO download reproduced this failure; pinned checksums, preservation of invalid files and atomic rename repair it |
+| Declared unused knobs | STITCH_BLUR_KERNEL, SIDE_FACE_CENTER_RATIO_THRESHOLD, ENABLE_OCCLUSION_FALLBACK, ENABLE_MASK_BLEND, SWAP_FEATHER_RATIO and SWAP_MASK_BLUR_KERNEL have no readers outside config.py in the frozen implementation. They are not effective ablations |
 
 Processing correctness changes were frozen in commit `df04db2`. Evaluation and
 paired-statistics code have separate commits recorded in provenance. Lock/cache

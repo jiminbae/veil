@@ -6,7 +6,7 @@ VEIL is a target-aware video face-swap pipeline that preserves selected target i
 
 VEIL processes an input video frame by frame. It detects faces with YOLO, tracks them with BoT-SORT, identifies protected target people with InsightFace/ArcFace embeddings, and swaps only non-target faces with a configured virtual face. Target identities are left unchanged.
 
-The pipeline also writes per-frame tracking metadata, face metadata, logs, and an annotated output video. When a non-target face is too small, occluded, or otherwise unsuitable for swapping, VEIL falls back to blur instead of forcing a low-quality swap.
+The pipeline also writes per-frame tracking metadata, face metadata, logs, and a clean output video. When a non-target face is too small, occluded, or otherwise unsuitable for swapping, VEIL falls back to blur instead of forcing a low-quality swap. Separate local review overlays support annotation checking.
 
 ## Demo
 
@@ -60,11 +60,11 @@ veil/
 
 ## Requirements
 
-- Python 3.10 or newer is recommended.
-- Python dependencies are managed in `models/requirements.txt`.
+- Python 3.12 is the tested research environment.
+- Tested core research pins are in `models/requirements-research.txt`; the historical environment inventory remains in `models/requirements.txt`.
 - NVIDIA GPU + CUDA are recommended for practical runtime.
 - CPU execution is possible by setting `device = "cpu"` in `models/veil/config.py`, but it will be significantly slower.
-- `models/requirements.txt` includes ONNX Runtime GPU, CUDA, and TensorRT-related packages. VEIL uses the available provider stack and falls back when a provider is unavailable.
+- `models/requirements-research.txt` pins the tested core packages, including ONNX Runtime GPU. VEIL records actual session providers and uses CUDA/CPU as available. TensorRT is optional.
 - `curl` or `wget` is required for `scripts/download_weights.sh`.
 
 ## Setup
@@ -74,7 +74,7 @@ git clone https://github.com/jiminbae/veil
 cd veil
 python -m venv .venv
 source .venv/bin/activate
-pip install -r models/requirements.txt
+pip install -r models/requirements-research.txt
 bash scripts/download_weights.sh
 ```
 
@@ -106,18 +106,18 @@ cd models/veil
 python main_hybrid.py
 ```
 
-Each run automatically chooses the next output index by scanning the existing files under `outputs/`.
+Each run automatically chooses the next output index by scanning the existing files under `outputs/`. For the tested CUDA build, independent verifiers and full research workflow, follow [the reproduction guide](docs/REPRODUCE_RESULTS.md).
 
 ## Outputs
 
 VEIL writes generated files under `models/veil/outputs/`:
 
-- Annotated result video: `outputs/result/output_target{N}.mp4`
+- Clean result video: `outputs/result/output_target{N}.mp4`
 - Runtime log: `outputs/log/tracking_target{N}_log.txt`
 - Face metadata: `outputs/metadata/face_metadata{N}.json`
 - Tracking metadata: `outputs/metadata/tracking_metadata{N}.json`
 
-The result video includes face boxes and labels. The metadata files include frame numbers, raw track IDs, stable face IDs, bounding boxes, target match status, similarity scores, quality labels, and fallback reasons.
+The default result video has no face boxes or labels. Benchmark execution forces clean output. `DRAW_ANNOTATIONS` is an optional debug setting; debug videos must not be used for evaluation. The metadata files include frame numbers, raw track IDs, stable face IDs, bounding boxes, target match status, similarity scores, quality labels, fallback reasons, and actual rendering actions. Every decoded frame also has a frame/timing ledger.
 
 ## Configuration
 
@@ -163,12 +163,17 @@ The main settings live in `models/veil/config.py`:
 ## Research Artifacts
 
 This repository also includes research artifacts for evaluating VEIL as a
-selective face de-identification pipeline. The final Panoptic-20 ablation
-results are available under `paper_results/panoptic20_ablation/`, with protocol
+selective face de-identification pipeline. Historical Panoptic-20 ablation
+summaries are available under `paper_results/panoptic20_ablation/`, with protocol
 and evaluation notes in `docs/`.
 
-These artifacts are provided separately from the basic project demo and setup
-instructions above.
+These historical artifacts are provided separately from the basic project demo.
+The new evaluation protocol, independent AdaFace/FaceNet verification, annotation
+review and reproduction commands are documented in [docs/EXPERIMENT_PROTOCOL.md](docs/EXPERIMENT_PROTOCOL.md),
+[docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) and
+[docs/REPRODUCE_RESULTS.md](docs/REPRODUCE_RESULTS.md). New run status and actual
+evidence are stored under `paper_results/veil_eval_20261104_0200/`; human annotation
+validation remains a separate status from execution.
 
 ## Developers
 
