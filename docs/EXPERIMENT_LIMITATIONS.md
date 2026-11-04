@@ -95,3 +95,11 @@ To resolve pending human validation, run the local annotation review command in
 REPRODUCE_RESULTS.md, inspect each requested identity/box/visibility/timing issue,
 export corrections with an actual reviewer ID, then regenerate evaluation into a
 new result run. Do not retroactively mark the current exploratory rows validated.
+
+Calibration repeated on the same CUDA device reproduced both frozen thresholds
+exactly. CPU calibration on the same checkpoint/images produced small threshold
+differences (AdaFace −0.0008472; FaceNet +0.0027684). These operating points are
+device sensitive. `verifier_calibration/device_sensitivity.json` preserves the
+audit; the original pre-test CUDA thresholds were never replaced. Extraction
+stage receipts cannot recover failure reasons masked by upstream reference/source
+failure; the stage table retains unknowns and bounds rather than inventing them.

@@ -112,6 +112,7 @@ def main():
         '`independent_identity_verifier/`와 집계 CSV에 있습니다. 다중 프레임 공격의 FMR은 별도 보정되지 않았습니다.','',
         '## 파일과 재현','','- `dataset_manifest.jsonl`, `model_registry.json`, `per_run_provenance.jsonl`: 입력·모델·코드·출력 해시.',
         '- `per_clip_metrics.csv`, `per_identity_metrics.csv`, `runtime_metrics.csv`, `quality_metrics.csv`: 실제 측정값.',
+        '- `independent_identity_verifier/extraction_stage_metrics.csv`: 원본·처리본 검출/정렬/임베딩 성공률과 미상 단계의 범위.',
         '- `aggregate_metrics.*`, `paired_comparisons.csv`, `confidence_intervals.csv`, `leave_one_sequence_out.csv`: 재계산 가능한 통계.',
         '- `integrity_checks.json`, `raw_validation.json`, `validation_checks.csv`: 실행 무결성과 독립 raw 재계산.',
         '- `figures/`: 7개 주 그래프의 PNG/SVG 및 관련 원자료.',

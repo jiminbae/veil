@@ -174,12 +174,16 @@ separate for implementation, execution and validation.
   images (P2E active starts 136; P2L starts 858). Scan the actual contiguous active
   filenames at stride ten; never fabricate frames across these gaps. Time is
   zero-based source filename / 30. Failed initial preparation is retained locally.
-- Data audit (before primary scoring): nominal ten-second Panoptic windows have
-  300 decoded frames, i.e. 10.01 s at native FPS. Adjacent source-index intervals
-  around the reinstated clip share one boundary frame. Retain frozen inputs and
-  report overlap, rather than silently truncating/replacing them. An original-PTS
-  comparison at 135 s confirmed the ceil(start*fps) first-frame mapping for one
-  clip. This is a spot check, not full human validation of every projection.
+- Pre-scoring source audit: an original-PTS comparison at 135 s confirmed the
+  ceil(start*fps) first-frame mapping for one clip. This is a spot check, not full
+  human validation of every projection.
+- Final frame audit: an earlier documentation approximation of 300 frames per
+  clip was incorrect. Actual input receipts contain 16 clips × 300 and 5 × 299,
+  totaling 6295 frames. Source-index intervals do not overlap when these actual
+  counts are used. Reconstructing the 125 s input gave the identical video hash,
+  299 frames and first source frame 3747. The evaluation always used decoded
+  manifest counts, so this documentation correction changes no input, renderer,
+  annotation, threshold or numerical result. No frozen input was truncated.
 - Execution amendment: P2L_S5_C2's frozen reference cannot be registered by
   ArcFace. All six attempts fail before video decoding; keep them in the secondary
   ledger with unavailable rates. Do not select an easier person/reference after

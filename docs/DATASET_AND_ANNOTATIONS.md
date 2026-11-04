@@ -7,21 +7,23 @@ URLs, timestamps, camera IDs and integer crop coordinates come from the retained
 historical `accepted_manifest.jsonl` and `accepted_summary.json` at `e14d89f`.
 No existing historical artifact is rewritten.
 
-Clips are reconstructed at 1920×1080, native 30000/1001 FPS, 300 frames, ten
-seconds, using accurate FFmpeg HTTP range seeking and MPEG-4 encoding. Each
+Clips are reconstructed at 1920×1080, native 30000/1001 FPS and nominal ten-second
+intervals using accurate FFmpeg HTTP range seeking and MPEG-4 encoding. Sixteen
+clips decode to 300 frames and five to 299 (6295 total). Each
 decoded clip, PNG reference frame and PNG target crop has SHA-256. The full
 original multi-minute video was not downloaded, so its full-file hash is null;
 official URL, byte length, ETag and Last-Modified identify the ranged source.
 HTTPS on the official Panoptic server failed certificate validation because of
 its weak key; the original manifest's HTTP endpoint is used and disclosed.
 File hashes provide local integrity, not authenticated HTTP-origin proof.
-The requested interval is ten seconds, while 300 frames at native FPS span
-10.01 seconds. The two adjacent intervals around the reinstated clip have a
-one-frame boundary overlap under the explicit source-index map. They are not
-independent clips; sequence clustering retains their dependence. Complete clip
-hashes are unique. An exact-PTS source spot check at 135 s confirmed source frame
-4046 as the first frame for `170221_haggling_b2_hd_00_27_0001350000`; other
-timing/projection mappings remain unverified pending review.
+The requested interval is ten seconds; actual duration is frame_count / native
+FPS. Source-index intervals have no overlap under the disclosed mapping when the
+actual 299/300 counts are used. Adjacent clips still share a scene/person and are
+not independent; sequence clustering retains that dependence. Complete clip
+hashes are unique. An exact-PTS spot check at 135 s confirmed source frame 4046
+for `170221_haggling_b2_hd_00_27_0001350000`. A second reconstruction at 125 s
+produced the identical input hash and 299 output frames, starting at source 3747.
+These are spot checks; other timing/projection mappings need human review.
 
 The original input videos, original target crops, original replacement file and
 per-frame benchmark outputs are absent from this checkout. Only historical

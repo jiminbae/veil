@@ -80,3 +80,14 @@ ONNX allocations but may miss short peaks. PyTorch allocator peaks are reported
 separately and omit ONNX memory. Model-load-after-import time excludes import-time
 InsightFace initialization; end-to-end wall time includes it. Stage host timers
 are synchronized after GPU stages. Writer enqueue time is not encoding time.
+
+`independent_identity_verifier/extraction_stage_metrics.csv` separates source and
+output detection, alignment/crop and embedding outcomes using saved adapter
+receipts. Successful embeddings establish all prior stages. Explicit detection,
+alignment/crop and invalid-embedding failures identify the stopping stage.
+Failures whose reason was masked by missing source/reference embeddings retain
+unknown detection/alignment outcomes; only bounds are reported in those rows.
+FaceNet's crop stage is its official detected-box crop, not landmark alignment.
+Reference failures have only an embedding-success flag, so their earlier stages
+are unavailable. Source observations repeat across paired conditions and must
+not be counted as independent samples. All evaluated ROIs were checked nonempty.

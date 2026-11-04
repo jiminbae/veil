@@ -129,6 +129,9 @@ OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 .venv/bin/python -m tools.score_researc
   --output paper_results/NEW_RUN/quality_metrics.csv
 .venv/bin/python -m tools.aggregate_research_results --output-dir paper_results/NEW_RUN
 .venv/bin/python -m tools.plot_research_results --output-dir paper_results/NEW_RUN
+.venv/bin/python -m tools.summarize_extraction_stages \
+  --local-evaluation local_research/NEW_RUN/evaluation \
+  --output-dir paper_results/NEW_RUN/independent_identity_verifier
 OMP_NUM_THREADS=2 .venv/bin/python -m pytest -q
 ```
 
