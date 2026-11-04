@@ -3,6 +3,8 @@
 import argparse
 import json
 from pathlib import Path
+import subprocess
+from tools.prepare_research_inputs import sha256,write_json,ROOT
 
 HTML=r'''<!doctype html><html lang="en"><meta charset="utf-8">
 <title>VEIL private annotation review</title><style>
@@ -25,11 +27,13 @@ human review record. Restricted source and output media must stay local.</p>
 <label>Visibility <select id="visibility"><option>camera_visible</option><option>occluded</option><option>not_a_face</option><option>out_of_frame</option></select></label>
 <button id="review">Record this observation reviewed</button>
 <button id="target">Confirm selected person as clip target</button></div>
+<div><label>Missing person ID <input id="newperson"></label><label>Target <input id="newtarget" type="checkbox"></label>
+<button id="add">Add missing face using entered box</button></div>
 <button id="save">Download review_corrections.json</button><pre id="log"></pre>
 <script>
 const $=id=>document.getElementById(id);let manifest=[],labels=[],row=null,edits=[];
 async function readLines(url){return (await (await fetch(url)).text()).trim().split('\n').filter(Boolean).map(JSON.parse)}
-function current(){return Math.min(row.frame_count,Math.max(1,Math.round($('video').currentTime*row.fps)+1))}
+function current(){return Math.min(row.frame_count,Math.max(1,Math.floor($('video').currentTime*row.fps+1e-4)+1))}
 function observation(){return labels.find(g=>g.frame_idx===current()&&g.person_id===$('person').value)}
 function render(){if(!row)return;const f=current();$('frame').value=f;
  const c=$('canvas');c.width=row.width;c.height=row.height;let ctx=c.getContext('2d');
@@ -44,7 +48,7 @@ function render(){if(!row)return;const f=current();$('frame').value=f;
 }
 async function change(){row=manifest[$('clips').selectedIndex];
  labels=await readLines('annotations/'+row.clip_id+'.jsonl');
- $('video').src='inputs/'+row.clip_id+'/input.mp4';$('ref').src='inputs/'+row.clip_id+'/target.png';render()}
+ $('video').src='inputs/'+row.clip_id+'/browser_review.mp4';$('ref').src='inputs/'+row.clip_id+'/target.png';render()}
 function author(){const value=$('reviewer').value.trim();if(!value)throw Error('Enter your actual reviewer ID');return value}
 function log(){ $('log').textContent=JSON.stringify(edits.slice(-5),null,2)+'\nTotal saved edits: '+edits.length}
 $('review').onclick=()=>{try{let g=observation();if(!g)throw Error('No observation selected');
@@ -53,6 +57,10 @@ $('review').onclick=()=>{try{let g=observation();if(!g)throw Error('No observati
  bbox:b,visibility:$('visibility').value,reviewer:author(),reviewed_at:new Date().toISOString()});log()}catch(e){alert(e.message)}};
 $('target').onclick=()=>{try{edits.push({action:'confirm_target_mapping',clip_id:row.clip_id,
  person_id:$('person').value,reviewer:author(),reviewed_at:new Date().toISOString()});log()}catch(e){alert(e.message)}};
+$('add').onclick=()=>{try{const id=$('newperson').value.trim(),b=$('bbox').value.split(',').map(Number);
+ if(!id||b.length!==4||b.some(v=>!Number.isFinite(v))||b[2]<=b[0]||b[3]<=b[1])throw Error('Enter a person ID and valid box');
+ edits.push({action:'add_observation',clip_id:row.clip_id,frame_idx:current(),person_id:id,bbox:b,
+ visibility:$('visibility').value,is_target:$('newtarget').checked,reviewer:author(),reviewed_at:new Date().toISOString()});log()}catch(e){alert(e.message)}};
 $('save').onclick=()=>{let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({edits},null,2)],{type:'application/json'}));a.download='review_corrections.json';a.click()};
 $('next').onclick=()=>{$('video').pause();$('video').currentTime=Math.min((current())/row.fps,(row.frame_count-1)/row.fps)};
 $('prev').onclick=()=>{$('video').pause();$('video').currentTime=Math.max(0,(current()-2)/row.fps)};
@@ -85,6 +93,14 @@ def apply_corrections(original,corrections,output):
                 row=matches[0];row.update(bbox=edit['bbox'],visibility=edit['visibility'],
                     verification_status='human_verified_observation',review_record=edit,
                     evaluation_eligible=edit['visibility'] not in {'not_a_face','out_of_frame'})
+            elif edit['action']=='add_observation':
+                if any(r['frame_idx']==edit['frame_idx'] and r['person_id']==edit['person_id'] for r in rows):
+                    raise ValueError('Added face duplicates an existing person/frame key')
+                rows.append({'clip_id':edit['clip_id'],'frame_idx':edit['frame_idx'],
+                    'person_id':edit['person_id'],'bbox':edit['bbox'],'visibility':edit['visibility'],
+                    'is_target':edit['is_target'],'annotation_source':'human_added_face',
+                    'verification_status':'human_verified_observation','review_record':edit,
+                    'evaluation_eligible':edit['visibility'] not in {'not_a_face','out_of_frame'}})
             else:raise ValueError('Unknown review action')
         (output/path.name).write_text(''.join(json.dumps(r)+'\n' for r in rows))
     (output/'review_audit.json').write_text(json.dumps({'edits':edits,'note':'Only individually reviewed rows are human verified'},indent=2))
@@ -92,12 +108,27 @@ def apply_corrections(original,corrections,output):
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--run-root',type=Path)
+    p.add_argument('--skip-proxies',action='store_true',help='Write the page only; proxies must already exist')
     p.add_argument('--corrections',type=Path);p.add_argument('--annotations',type=Path);p.add_argument('--output-dir',type=Path)
     a=p.parse_args()
     if a.corrections:apply_corrections(a.annotations,a.corrections,a.output_dir)
     else:
         if a.run_root is None:p.error('--run-root is required')
         (a.run_root/'annotation_review.html').write_text(HTML)
+        if not a.skip_proxies:
+            manifest=a.run_root/'inputs/dataset_manifest.jsonl'
+            for row in (json.loads(s) for s in manifest.read_text().splitlines() if s.strip()):
+                source=ROOT/row['clip_path'];dest=source.with_name('browser_review.mp4')
+                receipt=dest.with_suffix('.json')
+                if receipt.exists():
+                    old=json.loads(receipt.read_text())
+                    if old['input_sha256']==sha256(source) and dest.exists() and old['sha256']==sha256(dest):continue
+                    raise ValueError('Review proxy mismatch; preserve it and use a new run')
+                subprocess.run(['ffmpeg','-nostdin','-hide_banner','-loglevel','error','-n',
+                    '-i',str(source),'-an','-c:v','libx264','-preset','fast','-crf','18',
+                    '-threads','2','-movflags','+faststart',str(dest)],check=True)
+                write_json(receipt,{'input_sha256':sha256(source),'sha256':sha256(dest),
+                    'purpose':'browser-compatible private H264 review proxy; never used for evaluation'})
 
 
 if __name__=='__main__':main()

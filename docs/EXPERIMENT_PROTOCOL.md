@@ -157,3 +157,26 @@ separate for implementation, execution and validation.
   `170221_haggling_b2_hd_00_27_0001850000`. It confirmed 10 actual cache uses
   under full, 0 under no_swap_cache, and 0 swaps under selective_blur_only.
   Primary conditions remain unchanged and no clip is excluded for these findings.
+- v1.3 (before supplement preparation/results): secondary source ChokePoint has
+  two distinct crowded recordings, P2E_S5 and P2L_S5. Use camera C2 once per
+  recording; do not repeat other views or adjacent windows to reach ten clips.
+  After 100 background frames, scan every ten frames for the first >=2-face
+  MTCNN observation. Select the 300-frame window starting 30 frames before that
+  observation (minimum source frame 101), and register its largest observed face.
+  Source FPS=30, resolution=800x600. All six processing conditions stay frozen.
+  Crowded recordings have no supplied official identity/eye ground truth in the
+  downloaded groundtruth archive: use MTCNN + one-to-one IoU>=0.2 geometry tracks
+  with a ten-frame gap limit as explicitly unverified pseudo-labels. This shares
+  the verifier detector and can bias detector-retention findings; it is not an
+  independent human GT benchmark. Keep all secondary results separate. Eligibility
+  is based only on source faces, before viewing condition outputs.
+- v1.3a: source inspection found deliberate gaps after the 0..99 background
+  images (P2E active starts 136; P2L starts 858). Scan the actual contiguous active
+  filenames at stride ten; never fabricate frames across these gaps. Time is
+  zero-based source filename / 30. Failed initial preparation is retained locally.
+- Data audit (before primary scoring): nominal ten-second Panoptic windows have
+  300 decoded frames, i.e. 10.01 s at native FPS. Adjacent source-index intervals
+  around the reinstated clip share one boundary frame. Retain frozen inputs and
+  report overlap, rather than silently truncating/replacing them. An original-PTS
+  comparison at 135 s confirmed the ceil(start*fps) first-frame mapping for one
+  clip. This is a spot check, not full human validation of every projection.

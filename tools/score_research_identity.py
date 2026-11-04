@@ -156,7 +156,7 @@ def score_matrix(manifest,annotations,benchmark,calibration,output,local_output,
                 write_json(dest/'scores.json',records)
                 write_json(receipt,{'signature':result_signature,'attempts':len(records),'status':'completed'})
             base={'condition':condition,'clip_id':clip_id,'sequence':row['sequence'],'backend':backend,
-                'annotation_level':'unverified_official_3d_projection','frame_stride':stride}
+                'annotation_level':labels[0]['annotation_source'] if labels else 'not_available','frame_stride':stride}
             for group,predicate in [('target',lambda r:r['is_target']),('non_target',lambda r:not r['is_target']),
                 ('non_target_swap',lambda r:not r['is_target'] and r['action']=='SWAP'),
                 ('non_target_blur',lambda r:not r['is_target'] and r['action']=='BLUR')]:

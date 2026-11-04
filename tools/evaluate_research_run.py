@@ -143,10 +143,13 @@ def evaluate_matrix(manifest,annotations,benchmark,output,local_output):
                 associations[r['person_id']].add(r['stable_face_id'])
                 track_people[r['stable_face_id']].add(r['person_id'])
         metrics={'condition':condition,'clip_id':clip_id,'sequence':source['sequence'],'status':'completed',
-            'annotation_level':'unverified_official_3d_projection','human_verified':False,
+            'annotation_level':labels[0]['annotation_source'] if labels else 'not_available','human_verified':False,
             'expected_frames':source['frame_count'],'evaluated_frames':len(frames),
             'frames_without_system_observation':sum(not observations[f] for f in range(1,source['frame_count']+1)),
             'system_observations':a,'derived_target_observations':t,'derived_nontarget_observations':n,
+            'system_target_frame_count':len({s['frame_idx'] for s in actions if s['is_target_final']}),
+            'system_target_frame_coverage':len({s['frame_idx'] for s in actions if s['is_target_final']})/source['frame_count'],
+            'system_nontarget_observations':sum(not s['is_target_final'] for s in actions),
             'annotation_ineligible_visibility_count':len(labels)-len(eligible),
             'unmatched_system_observations':unmatched_system,
             'derived_target_preserve_rate':ratio(tc['PRESERVE'],t),
@@ -163,8 +166,8 @@ def evaluate_matrix(manifest,annotations,benchmark,output,local_output):
             'nontarget_exposure_longest_frames':max((b-a+1 for _,a,b in exposure_events),default=0),
             'swap_blur_switches':switch_count,'swap_blur_transitions':transition_count,
             'swap_blur_switch_rate':ratio(switch_count,transition_count),
-            'stable_ids_associated_with_multiple_official_people':sum(len(v)>1 for v in track_people.values()),
-            'official_people_with_multiple_stable_ids':sum(len(v)>1 for v in associations.values()),
+            'stable_ids_associated_with_multiple_label_people':sum(len(v)>1 for v in track_people.values()),
+            'label_people_with_multiple_stable_ids':sum(len(v)>1 for v in associations.values()),
             'swap_cache_observations':sum(bool(s.get('swap_cache_used')) for s in actions)}
         for prefix,counts in [('target',tc),('nontarget',nc),('system',sc)]:
             for state in ['PRESERVE','SWAP','BLUR','UNPROCESSED','UNKNOWN','MISSED']:
@@ -173,7 +176,7 @@ def evaluate_matrix(manifest,annotations,benchmark,output,local_output):
             obs=[r for r in rows if r['person_id']==person];counts=Counter(r['state'] for r in obs)
             identity={'condition':condition,'clip_id':clip_id,'sequence':source['sequence'],
                 'person_id':person,'is_target':obs[0]['is_target'],'observations':len(obs),
-                'annotation_level':'unverified_official_3d_projection'}
+                'annotation_level':obs[0]['annotation_source']}
             identity.update({state.lower()+'_count':counts[state] for state in ['PRESERVE','SWAP','BLUR','UNPROCESSED','UNKNOWN','MISSED']})
             identities.append(identity)
         for label,counter in [('target',tc),('nontarget',nc)]:
