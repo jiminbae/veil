@@ -1,0 +1,15 @@
+{
+  "branch": "research/veil-evaluation-20261104",
+  "delivery_receipt_commit": "resolve: git log -1 --format=%H -- paper_results/veil_eval_20261104_0200/git_delivery.json",
+  "elapsed_from_primary_start_to_result_delivery_sec": 5563.18889,
+  "elapsed_since_branch_creation_sec": 30995.667979,
+  "force_push": false,
+  "main_modified": false,
+  "remote": "https://github.com/jiminbae/veil",
+  "repository_configuration_modified": false,
+  "status": "results_pushed_and_remote_sha_verified",
+  "timing_scope": "Branch elapsed includes input/model preparation and interrupted idle; primary-start elapsed includes processing, postprocessing, packaging, final validation and push",
+  "verification_command": "git ls-remote origin refs/heads/research/veil-evaluation-20261104",
+  "verified_result_commit": "1865b48644700f1d10fb8b85dee1443aa4057e2d",
+  "verified_utc": "2026-11-04T01:42:44.667979+00:00"
+}

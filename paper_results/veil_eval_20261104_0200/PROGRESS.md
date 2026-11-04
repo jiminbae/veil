@@ -23,3 +23,5 @@
 - Human annotation review remains pending; stress target/reference provenance and optional external baseline remain unavailable as disclosed.
 - Three actual qualitative candidates are private; no source/processed imagery, crops, embeddings or weights enter Git.
 - See delivery_validation.json and completion_status.json for exact scope, and Git history for the result commit/push.
+
+- Actual push confirmed; remote branch SHA equals result commit `1865b48644700f1d10fb8b85dee1443aa4057e2d`. The subsequent delivery receipt commit records this observation.

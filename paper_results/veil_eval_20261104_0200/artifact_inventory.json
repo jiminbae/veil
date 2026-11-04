@@ -1,8 +1,8 @@
 {
   "files": {
     "PROGRESS.md": {
-      "bytes": 2010,
-      "sha256": "820660b67cdb098553bb492598ea437e614e7097b9254457089800eb6bca0a54"
+      "bytes": 2184,
+      "sha256": "585692a887ef6795ba6a67dcfca47bb28a42bf7aba2ce7e9e7e9365cff9e664d"
     },
     "README.md": {
       "bytes": 6243,
@@ -113,8 +113,8 @@
       "sha256": "10c8aec0c7c5a27ce96c1cbed40bbc6c7e2ae7512b5c8d46e4b32274e540ff26"
     },
     "completion_status.json": {
-      "bytes": 3590,
-      "sha256": "3741218987343931dd3971cf00b39012bef31290945f41d318cc246f4bc6bdbb"
+      "bytes": 3641,
+      "sha256": "5594460bea05f3e0e778021318521708acd9b16ee05b0c6e44280657921e3464"
     },
     "condition_manifest.json": {
       "bytes": 5700,
@@ -219,6 +219,10 @@
     "figures/utility_vs_risk_source.csv": {
       "bytes": 12006,
       "sha256": "d3f44a76b313655c15b41c9a7935f1e64185c00da9ab26586e0046e5c5532ef7"
+    },
+    "git_delivery.json": {
+      "bytes": 900,
+      "sha256": "1e90a358418c72334aa55ea246a78bf73fb6bcf31a2bdbca8e53b37d7cd7515c"
     },
     "historical_recalculation.json": {
       "bytes": 1051,
@@ -355,5 +359,5 @@
   },
   "private_path_and_credential_pattern_scan": "passed",
   "scope": "All public artifacts before this self-excluding inventory; only aggregate statistics images",
-  "total_bytes": 3949020
+  "total_bytes": 3950145
 }

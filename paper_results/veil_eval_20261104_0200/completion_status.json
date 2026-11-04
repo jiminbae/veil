@@ -34,7 +34,11 @@
     "log": "test_results.log",
     "passed": 47
   },
-  "git_delivery": "Results prepared on the authorized branch; actual push receipt is recorded separately after Git confirms success",
+  "git_delivery": {
+    "receipt": "git_delivery.json",
+    "status": "result_commit_pushed_and_verified",
+    "verified_result_commit": "1865b48644700f1d10fb8b85dee1443aa4057e2d"
+  },
   "historical_stress_processing": {
     "decoded_intervals": 9,
     "reason": "Nine rejected intervals recoverable, but original protected identities/rejected references absent; local review inputs preserved",
