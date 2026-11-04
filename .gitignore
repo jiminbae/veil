@@ -128,3 +128,6 @@ tmp/
 # Paper-ready lightweight result artifacts
 !paper_results/
 !paper_results/**
+
+# Private research inputs, outputs, per-frame records and third-party code
+local_research/

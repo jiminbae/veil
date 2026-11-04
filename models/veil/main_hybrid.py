@@ -1,4 +1,7 @@
 import cv2
+import json
+import numpy as np
+import torch
 import logging
 import queue
 import threading
@@ -26,6 +29,11 @@ from config import (
     LOG_EVERY_N_FRAMES,
     ENABLE_FACE_SWAP,
     ENABLE_FALLBACK_BLUR,
+    IDENTITY_LOCK_ENABLED,
+    ENABLE_SWAP_CACHE,
+    DRAW_ANNOTATIONS,
+    FRAME_METADATA_PATH,
+    RUNTIME_METADATA_PATH,
     FACE_SWAP_BATCH_SIZE,
     device,
 )
@@ -43,12 +51,15 @@ from face_identifier import (
     target_face_ids,
     target_track_ids,
     FACE_PROVIDERS,
+    face_app,
 )
 from crop_manager import assess_face_quality, apply_fallback_blur
 from metadata_manager import make_face_data, save_metadata
+from render_safety import restore_protected_regions, changed_pixels
 
 
 target_last_seen = {}
+target_track_faces = {}
 swap_patch_cache = {}
 
 
@@ -122,23 +133,32 @@ def setup_dirs_and_logging():
     logging.info("Swap engine=inswapper_128.onnx")
 
 
+def synchronize_gpu():
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+
+
 def mark_target_seen(stable_face_id, raw_track_id, current_frame_idx):
     if stable_face_id is not None:
         target_face_ids.add(stable_face_id)
         target_last_seen[f"face_{stable_face_id}"] = current_frame_idx
 
     target_track_ids.add(raw_track_id)
+    target_track_faces[raw_track_id] = stable_face_id
     target_last_seen[f"track_{raw_track_id}"] = current_frame_idx
 
 
-def is_known_target_face(stable_face_id):
-    return stable_face_id is not None and stable_face_id in target_face_ids
+def is_known_target_face(stable_face_id, current_frame_idx):
+    return (stable_face_id is not None and stable_face_id in target_face_ids
+            and current_frame_idx - target_last_seen.get(f"face_{stable_face_id}", -999999)
+            <= TARGET_HOLD_FRAMES)
 
 
-def is_recent_target_track(raw_track_id, current_frame_idx):
+def is_recent_target_track(raw_track_id, current_frame_idx, stable_face_id=None):
     last_seen = target_last_seen.get(f"track_{raw_track_id}", -999999)
     return (
         raw_track_id in target_track_ids
+        and target_track_faces.get(raw_track_id) == stable_face_id
         and current_frame_idx - last_seen <= TARGET_HOLD_FRAMES
     )
 
@@ -157,8 +177,11 @@ def cleanup_target_last_seen(current_frame_idx):
             try:
                 stale_track_id = int(key.replace("track_", ""))
                 target_track_ids.discard(stale_track_id)
+                target_track_faces.pop(stale_track_id, None)
             except ValueError:
                 pass
+        elif key.startswith("face_"):
+            target_face_ids.discard(int(key[5:]))
 
 
 def get_swap_key(track_ctx):
@@ -296,13 +319,8 @@ def prepare_track(original_frame, track, target_embeddings, current_frame_idx):
     if emb is not None:
         is_target, target_sim = check_target_match(emb, target_embeddings)
 
-        if is_target:
+        if is_target and embedding_refreshed:
             mark_target_seen(stable_face_id, raw_track_id, current_frame_idx)
-
-    if is_known_target_face(stable_face_id):
-        mark_target_seen(stable_face_id, raw_track_id, current_frame_idx)
-    elif is_recent_target_track(raw_track_id, current_frame_idx):
-        mark_target_seen(stable_face_id, raw_track_id, current_frame_idx)
 
     if stable_face_id is not None:
         sx1, sy1, sx2, sy2 = smooth_bbox(stable_face_id, raw_bbox)
@@ -312,8 +330,10 @@ def prepare_track(original_frame, track, target_embeddings, current_frame_idx):
     smoothed_bbox = [sx1, sy1, sx2, sy2]
 
     is_target_final = (
-        is_known_target_face(stable_face_id)
-        or is_recent_target_track(raw_track_id, current_frame_idx)
+        is_target or (IDENTITY_LOCK_ENABLED and (
+            is_known_target_face(stable_face_id, current_frame_idx)
+            or is_recent_target_track(raw_track_id, current_frame_idx, stable_face_id)
+        ))
     )
     is_background = not is_target_final
 
@@ -361,8 +381,10 @@ def finalize_track(render_frame, track_ctx, current_frame_idx, swap_success=Fals
 
     blur_applied = False
     if is_background and not swap_success and ENABLE_FALLBACK_BLUR:
-        render_frame = apply_fallback_blur(render_frame, smoothed_bbox)
-        blur_applied = True
+        render_frame, blur_applied = apply_fallback_blur(
+            render_frame, smoothed_bbox, return_status=True)
+        if not blur_applied:
+            fallback_reasons = [*fallback_reasons, "blur_no_pixel_change"]
 
     if is_target_final:
         final_action = "PRESERVE"
@@ -409,6 +431,9 @@ def finalize_track(render_frame, track_ctx, current_frame_idx, swap_success=Fals
             f"Quality={quality} FallbackReasons={fallback_reasons}"
         )
 
+    if not DRAW_ANNOTATIONS:
+        return face_data, render_frame
+
     if stable_face_id is not None:
         if final_action == "PRESERVE":
             label, color = f"TARGET ID {stable_face_id}", (0, 0, 255)
@@ -447,7 +472,10 @@ def finalize_track(render_frame, track_ctx, current_frame_idx, swap_success=Fals
 
 
 def main():
+    process_started = perf_counter()
     setup_dirs_and_logging()
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
 
     print(f"Output: {OUTPUT_PATH}")
 
@@ -461,6 +489,9 @@ def main():
         logging.info(f"Face swap enabled: {TARGET_IMAGE_PATH}")
     else:
         logging.info("Face swap disabled")
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+    model_load_sec = perf_counter() - process_started
 
     cap = cv2.VideoCapture(VIDEO_PATH)
     if not cap.isOpened():
@@ -480,6 +511,8 @@ def main():
     current_frame_idx = 0
     all_face_metadata = []
     all_tracking_metadata = []
+    frame_metadata = []
+    loop_started = perf_counter()
 
     while True:
         ret, frame = cap.read()
@@ -503,6 +536,7 @@ def main():
             device,
             current_frame_idx,
         )
+        synchronize_gpu()
         detect_elapsed = perf_counter() - detect_started
 
         num_dets = 0 if dets is None else len(dets)
@@ -512,10 +546,11 @@ def main():
 
         track_started = perf_counter()
 
-        if dets is None or len(dets) == 0:
-            tracks = []
-        else:
-            tracks = tracker.update(dets, original_frame)
+        # Empty frames must age the tracker as well.
+        if dets is None:
+            dets = np.empty((0, 6), dtype=np.float32)
+        tracks = tracker.update(dets, original_frame)
+        synchronize_gpu()
 
         track_elapsed = perf_counter() - track_started
 
@@ -538,6 +573,7 @@ def main():
             prepare_track(original_frame, track, target_embeddings, current_frame_idx)
             for track in tracks
         ]
+        synchronize_gpu()
         prepare_tracks_elapsed = perf_counter() - prepare_tracks_started
 
         swap_indices = [
@@ -578,10 +614,13 @@ def main():
                 target_kps_list=track_kps_list,
                 batch_size=FACE_SWAP_BATCH_SIZE,
             )
+            synchronize_gpu()
             swap_elapsed = perf_counter() - swap_started
             swap_success_by_index = dict(zip(swap_indices, swap_success_flags))
 
             for idx, success in swap_success_by_index.items():
+                if not ENABLE_SWAP_CACHE:
+                    continue
                 if not success:
                     continue
 
@@ -622,6 +661,8 @@ def main():
 
             if (
                 not swap_success
+                and ENABLE_FACE_SWAP
+                and ENABLE_SWAP_CACHE
                 and track_ctx["is_background"]
                 and not overlaps_with_target(track_ctx, track_contexts)
             ):
@@ -632,6 +673,7 @@ def main():
                 )
                 if cache_success:
                     swap_success = True
+                    track_ctx['swap_cache_used'] = True
 
             face_data, render_frame = finalize_track(
                 render_frame,
@@ -639,7 +681,17 @@ def main():
                 current_frame_idx,
                 swap_success=swap_success,
             )
+            face_data['swap_cache_used'] = bool(track_ctx.get('swap_cache_used', False))
             all_face_metadata.append(face_data)
+
+        render_frame = restore_protected_regions(render_frame, original_frame, track_contexts)
+        for ctx, row in zip(track_contexts, all_face_metadata[-len(track_contexts):] if track_contexts else []):
+            row['render_changed_pixels'] = changed_pixels(original_frame, render_frame, ctx['smoothed_bbox'])
+            if row['final_action'] in {'BLUR', 'SWAP'} and row['render_changed_pixels'] == 0:
+                row['final_action'] = 'UNPROCESSED'
+                row['blur_applied'] = False
+                row['swap_success'] = False
+                row['fallback_reasons'].append('no_final_pixel_change_after_target_protection')
 
         finalize_elapsed = perf_counter() - finalize_started
 
@@ -648,6 +700,13 @@ def main():
         write_elapsed = perf_counter() - write_started
 
         frame_total_sec = perf_counter() - frame_started
+        frame_metadata.append({
+            'frame_idx': current_frame_idx, 'detections': num_dets, 'tracks': len(tracks),
+            'detect_sec': detect_elapsed, 'track_sec': track_elapsed,
+            'identify_sec': prepare_tracks_elapsed, 'swap_sec': swap_elapsed,
+            'finalize_sec': finalize_elapsed, 'writer_enqueue_sec': write_elapsed,
+            'frame_wall_sec': frame_total_sec,
+        })
 
         print(
             f"[Frame {current_frame_idx}] "
@@ -671,10 +730,22 @@ def main():
 
     cap.release()
     out.release()
-    cv2.destroyAllWindows()
+    # Headless execution must not require OpenCV GUI support.
 
     save_metadata(TRACKING_METADATA_PATH, all_tracking_metadata)
     save_metadata(METADATA_PATH, all_face_metadata)
+    save_metadata(FRAME_METADATA_PATH or str(Path(METADATA_PATH).with_name('frames.json')), frame_metadata)
+    runtime = {
+        'frames': current_frame_idx, 'width': width, 'height': height, 'fps': fps,
+        'model_load_sec': model_load_sec, 'warm_wall_sec': perf_counter() - loop_started,
+        'process_wall_sec': perf_counter() - process_started,
+        'peak_torch_gpu_memory_bytes': torch.cuda.max_memory_allocated() if torch.cuda.is_available() else None,
+        'clean_output': not DRAW_ANNOTATIONS,
+        'recognizer_actual_providers': {k: v.session.get_providers() for k, v in face_app.models.items()},
+        'gpu_stage_timing_note': 'host wall times with CUDA synchronization after detection/tracking/identification/swap; writer enqueue excludes final drain',
+        'gpu_memory_note': 'PyTorch allocations only; excludes ONNX Runtime; NVML measured externally',
+    }
+    save_metadata(RUNTIME_METADATA_PATH or str(Path(METADATA_PATH).with_name('runtime.json')), runtime)
 
     logging.info("===== InSwapper Pipeline Finished =====")
     logging.info(f"Saved result to: {OUTPUT_PATH}")

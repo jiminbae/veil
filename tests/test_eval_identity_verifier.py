@@ -72,10 +72,9 @@ class EvalIdentityVerifierTest(unittest.TestCase):
             config = json.loads((root / "out" / "evaluation_config.json").read_text(encoding="utf-8"))
             self.assertFalse(config["paper_valid_backend"])
 
-    def test_unimplemented_independent_backend_has_clear_error(self):
-        verifier = build_verifier("adaface")
-        with self.assertRaisesRegex(VerifierError, "not implemented"):
-            verifier.extract_embedding(Image.new("RGB", (10, 10), "red"))
+    def test_adaface_requires_a_real_checkpoint(self):
+        with self.assertRaisesRegex(VerifierError, "official local checkpoint"):
+            build_verifier("adaface")
 
 
 if __name__ == "__main__":

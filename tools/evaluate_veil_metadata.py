@@ -161,6 +161,9 @@ def load_gt_annotations(path: Path | None) -> dict[str, list[dict]]:
             "bbox": bbox,
             "visibility": record.get("visibility", ""),
             "notes": record.get("notes", ""),
+            "is_target": str(record.get('is_target', True)).lower() in {'true','1','yes'},
+            "annotation_source": record.get('annotation_source', 'unspecified'),
+            "verification_status": record.get('verification_status', 'unspecified'),
         }
         if row["frame_idx"] <= 0:
             raise EvaluationError(f"GT annotation row {idx} has invalid frame_idx: {row['frame_idx']}")
@@ -194,10 +197,10 @@ def empty_gt_metrics(iou_threshold: float) -> dict:
         "gt_target_swap_boxes": 0,
         "gt_target_blur_boxes": 0,
         "gt_target_other_action_boxes": 0,
-        "gt_target_match_rate": 0.0,
-        "gt_target_processed_as_preserve_rate": 0.0,
-        "gt_target_altered_rate": 0.0,
-        "gt_target_missed_rate": 0.0,
+        "gt_target_match_rate": None,
+        "gt_target_processed_as_preserve_rate": None,
+        "gt_target_altered_rate": None,
+        "gt_target_missed_rate": None,
     }
 
 
@@ -219,15 +222,31 @@ def compute_gt_target_metrics(
 
     match_rows: list[dict] = []
     counts = Counter()
+    # Reserve observations once per frame; one detection cannot cover two people.
+    from scipy.optimize import linear_sum_assignment
+    import numpy as np
+    gt_by_frame = defaultdict(list)
     for gt in gt_rows:
+        gt_by_frame[int(gt['frame_idx'])].append(gt)
+    assignments = {}
+    for frame, rows in gt_by_frame.items():
+        candidates = by_frame.get(frame, [])
+        if not candidates:
+            continue
+        ious = np.array([[bbox_iou(g['bbox'], a.get('bbox')) for a in candidates] for g in rows])
+        weights = np.where(ious >= iou_threshold, len(rows) + ious, 0.0)
+        gi, ai = linear_sum_assignment(-weights)
+        for gidx, aidx in zip(gi, ai):
+            if ious[gidx, aidx] >= iou_threshold:
+                assignments[id(rows[gidx])] = (candidates[aidx], float(ious[gidx, aidx]))
+    for gt in gt_rows:
+        if not gt.get('is_target', True):
+            continue
         candidates = by_frame.get(int(gt["frame_idx"]), [])
         best_action = None
         best_iou = 0.0
-        for action in candidates:
-            iou = bbox_iou(gt["bbox"], action.get("bbox"))
-            if iou > best_iou:
-                best_iou = iou
-                best_action = action
+        if id(gt) in assignments:
+            best_action, best_iou = assignments[id(gt)]
 
         matched = best_action is not None and best_iou >= iou_threshold
         state = best_action["state"] if matched else "MISSED"
@@ -261,7 +280,9 @@ def compute_gt_target_metrics(
             }
         )
 
-    total = len(gt_rows)
+    total = sum(bool(g.get('is_target',True)) for g in gt_rows)
+    if not total:
+        return metrics, match_rows
     metrics.update(
         {
             "gt_target_boxes": total,
@@ -397,6 +418,12 @@ def evaluate_clip(clip_id: str, run_dir: Path, review: dict | None = None, *, bl
     logged_swaps = parse_track_swap_log(log_path)
     deduped = deduplicate_rows(rows)
     max_frame = max((int(row.get("frame_idx", 0)) for row in deduped), default=0)
+    frame_ledger = run_dir / 'frames.json'
+    denominator_source = 'legacy_last_face_observation; trailing empty frames unverifiable'
+    if frame_ledger.exists():
+        frames = read_json(frame_ledger)
+        max_frame = max((int(row['frame_idx']) for row in frames),default=0)
+        denominator_source = 'decoded_frame_ledger'
     actions: list[dict] = []
     for row in deduped:
         state, reason = classify_row(row, logged_swaps, blur_fallback_enabled=blur_fallback_enabled)
@@ -438,6 +465,7 @@ def evaluate_clip(clip_id: str, run_dir: Path, review: dict | None = None, *, bl
         "clip_id": clip_id,
         "accepted": (review or {}).get("accepted", ""),
         "total_frames": max_frame,
+        "frame_denominator_source": denominator_source,
         "metadata_rows": len(rows),
         "deduped_face_rows": len(deduped),
         "duplicate_rows_removed": len(rows) - len(deduped),
@@ -529,10 +557,10 @@ def aggregate(per_clip: Sequence[dict]) -> dict:
         "gt_target_swap_boxes": gt_swap,
         "gt_target_blur_boxes": gt_blur,
         "gt_target_other_action_boxes": gt_other,
-        "gt_target_match_rate": round(safe_div(gt_matched, gt_total), 6),
-        "gt_target_processed_as_preserve_rate": round(safe_div(gt_preserve, gt_total), 6),
-        "gt_target_altered_rate": round(safe_div(gt_altered, gt_total), 6),
-        "gt_target_missed_rate": round(safe_div(gt_missed, gt_total), 6),
+        "gt_target_match_rate": round(safe_div(gt_matched, gt_total), 6) if gt_total else None,
+        "gt_target_processed_as_preserve_rate": round(safe_div(gt_preserve, gt_total), 6) if gt_total else None,
+        "gt_target_altered_rate": round(safe_div(gt_altered, gt_total), 6) if gt_total else None,
+        "gt_target_missed_rate": round(safe_div(gt_missed, gt_total), 6) if gt_total else None,
         "protected_alteration_rate": round(
             safe_div(
                 sum(int(row["protected_swap_rows"]) + int(row["protected_blur_rows"]) + int(row["protected_failed_rows"]) for row in source),

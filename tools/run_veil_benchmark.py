@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import hashlib
+import os
 import subprocess
 import sys
 import time
@@ -45,6 +47,12 @@ CONDITIONS = {
         "blur_fallback_enabled": True,
     },
 }
+for _settings in CONDITIONS.values():
+    _settings.update(enable_mouth_paste=True, enable_swap_cache=True)
+CONDITIONS['no_mouth_paste'] = {**CONDITIONS['full'], 'enable_mouth_paste': False,
+    'description': 'full with original mouth restoration disabled'}
+CONDITIONS['no_swap_cache'] = {**CONDITIONS['full'], 'enable_swap_cache': False,
+    'description': 'full with rendered swap patch cache writes and reads disabled'}
 
 
 class BenchmarkError(RuntimeError):
@@ -71,7 +79,7 @@ def write_csv(path: Path, rows: Sequence[dict]) -> None:
         path.write_text("", encoding="utf-8")
         return
     with path.open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=list(rows[0].keys()))
+        writer = csv.DictWriter(stream, fieldnames=list(dict.fromkeys(k for row in rows for k in row)))
         writer.writeheader()
         writer.writerows(rows)
 
@@ -144,6 +152,8 @@ def main_hybrid_launcher(
         "enable_face_swap": bool(condition["enable_face_swap"]),
         "identity_lock_enabled": bool(condition["identity_lock_enabled"]),
         "blur_fallback_enabled": bool(condition["blur_fallback_enabled"]),
+        "enable_mouth_paste": bool(condition.get("enable_mouth_paste", True)),
+        "enable_swap_cache": bool(condition.get("enable_swap_cache", True)),
     }
     payload_literal = json.dumps(json.dumps(payload))
     return f'''
@@ -161,22 +171,15 @@ config.METADATA_PATH = payload["metadata_path"]
 config.TRACKING_METADATA_PATH = payload["tracking_metadata_path"]
 config.ENABLE_FACE_SWAP = payload["enable_face_swap"]
 config.ENABLE_FALLBACK_BLUR = payload["blur_fallback_enabled"]
+config.IDENTITY_LOCK_ENABLED = payload["identity_lock_enabled"]
+config.ENABLE_MOUTH_PASTE = payload["enable_mouth_paste"]
+config.ENABLE_SWAP_CACHE = payload["enable_swap_cache"]
+config.DRAW_ANNOTATIONS = False
 Path(config.OUTPUT_PATH).parent.mkdir(parents=True, exist_ok=True)
 Path(config.LOG_PATH).parent.mkdir(parents=True, exist_ok=True)
 Path(config.METADATA_PATH).parent.mkdir(parents=True, exist_ok=True)
 Path(config.TRACKING_METADATA_PATH).parent.mkdir(parents=True, exist_ok=True)
 import main_hybrid
-if not payload["identity_lock_enabled"]:
-    main_hybrid.is_known_target_face = lambda stable_face_id: False
-    main_hybrid.is_recent_target_track = lambda raw_track_id, current_frame_idx: False
-    main_hybrid.mark_target_seen = lambda stable_face_id, raw_track_id, current_frame_idx: None
-    _prepare_track = main_hybrid.prepare_track
-    def _direct_match_only_prepare_track(original_frame, track, target_embeddings, current_frame_idx):
-        ctx = _prepare_track(original_frame, track, target_embeddings, current_frame_idx)
-        ctx["is_target_final"] = bool(ctx.get("is_target"))
-        ctx["is_background"] = not ctx["is_target_final"]
-        return ctx
-    main_hybrid.prepare_track = _direct_match_only_prepare_track
 main_hybrid.main()
 '''.strip()
 
@@ -202,14 +205,35 @@ def run_one_clip(
     stdout_path = run_dir / "stdout.log"
     stderr_path = run_dir / "stderr.log"
     run_dir.mkdir(parents=True, exist_ok=True)
+    def sha(path):
+        digest = hashlib.sha256()
+        with Path(path).open('rb') as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                digest.update(chunk)
+        return digest.hexdigest()
+    source_paths = sorted(veil_dir.glob('*.py')) + [Path(__file__).resolve()]
+    model_paths = sorted((veil_dir / 'weights').glob('*'))
+    model_paths += sorted((Path.home() / '.insightface/models/buffalo_l').glob('*.onnx'))
+    fingerprint = {
+        'condition': condition, 'clip': sha(row['clip_path']),
+        'protected_reference': sha(row['target_image_path']), 'replacement': sha(replacement_image_path),
+        'code': {str(p.relative_to(PROJECT_ROOT)): sha(p) for p in source_paths},
+        'models': {p.name: sha(p) for p in model_paths if p.is_file()},
+        'python': python_executable,
+    }
+    receipt_path = run_dir / 'run_receipt.json'
+    existing = json.loads(receipt_path.read_text()) if receipt_path.exists() else {}
+    reusable = (existing.get('status') == 'completed' and existing.get('fingerprint') == fingerprint
+        and all(p.exists() and existing.get('outputs', {}).get(p.name) == sha(p)
+                for p in (output_video, face_metadata_path, tracking_metadata_path)))
 
-    if skip_existing and output_video.exists() and face_metadata_path.exists() and tracking_metadata_path.exists():
+    if skip_existing and reusable:
         return {
             "clip_id": clip_id,
             "condition": condition_name,
             "status": "skipped_existing",
             "returncode": 0,
-            "elapsed_sec": 0.0,
+            "elapsed_sec": existing.get('elapsed_sec'),
             "clip_path": row["clip_path"],
             "protected_target_image_path": row["target_image_path"],
             "replacement_image_path": str(replacement_image_path),
@@ -221,9 +245,9 @@ def run_one_clip(
             "stderr": str(stderr_path),
         }
 
-    for old_path in (output_video, log_path, face_metadata_path, tracking_metadata_path, stdout_path, stderr_path):
-        if old_path.exists():
-            old_path.unlink()
+    if any(run_dir.iterdir()):
+        raise BenchmarkError(f'Refusing to overwrite previous attempt: {run_dir}. Use a new output directory; reuse requires matching hashes.')
+    write_json(receipt_path, {'status': 'running', 'fingerprint': fingerprint})
 
     code = main_hybrid_launcher(
         clip_path=Path(row["clip_path"]).expanduser().resolve(),
@@ -238,23 +262,71 @@ def run_one_clip(
     command = [python_executable, "-c", code]
     started = time.perf_counter()
     with stdout_path.open("w", encoding="utf-8") as stdout, stderr_path.open("w", encoding="utf-8") as stderr:
-        completed = subprocess.run(
+        child_env = dict(os.environ, YOLO_CONFIG_DIR=str(run_dir.resolve() / 'ultralytics'),
+                         YOLO_AUTOINSTALL='false')
+        peak_gpu_memory = None
+        try:
+            import pynvml
+            pynvml.nvmlInit()
+            gpu_handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+        except Exception:
+            gpu_handle = None
+        proc = subprocess.Popen(
             command,
             cwd=str(veil_dir),
             stdout=stdout,
             stderr=stderr,
             text=True,
-            timeout=timeout_sec,
-            check=False,
+            env=child_env,
         )
+        try:
+            while True:
+                if gpu_handle is not None:
+                    try:
+                        processes = pynvml.nvmlDeviceGetComputeRunningProcesses(gpu_handle)
+                        amounts = [p.usedGpuMemory for p in processes if p.pid == proc.pid
+                                   and isinstance(p.usedGpuMemory, int) and p.usedGpuMemory < 2**60]
+                        if amounts:
+                            peak_gpu_memory = max(peak_gpu_memory or 0, sum(amounts))
+                    except Exception:
+                        pass
+                try:
+                    proc.wait(timeout=.25)
+                    break
+                except subprocess.TimeoutExpired:
+                    if timeout_sec and time.perf_counter() - started > timeout_sec:
+                        proc.kill()
+                        proc.wait()
+                        write_json(receipt_path, {'status':'timeout','fingerprint':fingerprint,
+                            'elapsed_sec':time.perf_counter()-started})
+                        raise subprocess.TimeoutExpired(command, timeout_sec)
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
     elapsed = time.perf_counter() - started
     outputs_exist = output_video.exists() and face_metadata_path.exists() and tracking_metadata_path.exists()
-    status = "completed" if completed.returncode == 0 and outputs_exist else "failed"
+    status = "completed" if proc.returncode == 0 and outputs_exist else "failed"
+    # A zero exit status is insufficient: decode all frames and verify count and metadata range.
+    if status == 'completed':
+        import cv2
+        cap = cv2.VideoCapture(str(output_video))
+        decoded = 0
+        while cap.read()[0]:
+            decoded += 1
+        cap.release()
+        source = cv2.VideoCapture(str(row['clip_path']))
+        expected = int(source.get(cv2.CAP_PROP_FRAME_COUNT))
+        source.release()
+        status = 'completed' if decoded == expected and decoded > 0 else 'failed'
+    write_json(receipt_path, {'status': status, 'fingerprint': fingerprint,
+        'outputs': {p.name: sha(p) for p in (output_video, face_metadata_path, tracking_metadata_path) if p.exists()},
+        'elapsed_sec': elapsed, 'peak_nvml_process_gpu_memory_bytes':peak_gpu_memory})
     return {
         "clip_id": clip_id,
         "condition": condition_name,
         "status": status,
-        "returncode": completed.returncode,
+        "returncode": proc.returncode,
         "elapsed_sec": round(elapsed, 3),
         "clip_path": row["clip_path"],
         "protected_target_image_path": row["target_image_path"],
@@ -367,6 +439,8 @@ def run_benchmark(args: argparse.Namespace) -> dict:
             condition_runs.append(run_result)
             all_runs.append(run_result)
             write_json(condition_dir / "run_summary.json", condition_runs)
+            write_json(output_dir / "run_summary.json", all_runs)
+            write_csv(output_dir / "run_summary.csv", all_runs)
 
         completed = [run for run in condition_runs if run["status"] in ("completed", "skipped_existing")]
         if completed:

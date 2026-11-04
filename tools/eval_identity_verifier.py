@@ -86,7 +86,13 @@ class UnimplementedVerifier(Verifier):
 def build_verifier(backend: str, model_path: Path | None = None) -> Verifier:
     if backend == "debug_color":
         return DebugColorVerifier()
-    if backend in {"adaface", "magface", "facenet", "custom_onnx"}:
+    if backend in {'adaface', 'facenet'}:
+        from tools.independent_verifiers import FaceRecognitionVerifier
+        try:
+            return FaceRecognitionVerifier(backend, model_path)
+        except (ValueError, FileNotFoundError) as exc:
+            raise VerifierError(str(exc)) from exc
+    if backend in {"magface", "custom_onnx"}:
         return UnimplementedVerifier(backend, model_path)
     raise VerifierError(f"Unknown verifier backend: {backend}")
 
@@ -313,12 +319,12 @@ def load_gt_pairs(gt_path: Path) -> list[PairSpec]:
 
 
 def summarize_scores(scores: Sequence[float], threshold: float) -> dict[str, float | int]:
-    valid = [score for score in scores if not math.isnan(score)]
+    valid = [score for score in scores if score is not None and math.isfinite(score)]
     return {
         "pairs": len(valid),
-        "mean": round(float(statistics.fmean(valid)), 6) if valid else 0.0,
-        "median": round(float(statistics.median(valid)), 6) if valid else 0.0,
-        "accept_rate": round(sum(1 for score in valid if score >= threshold) / len(valid), 6) if valid else 0.0,
+        "mean": round(float(statistics.fmean(valid)), 6) if valid else None,
+        "median": round(float(statistics.median(valid)), 6) if valid else None,
+        "accept_rate": round(sum(1 for score in valid if score >= threshold) / len(valid), 6) if valid else None,
     }
 
 
@@ -380,6 +386,14 @@ def evaluate_identity(
         non_target_high_risk: list[tuple[float, dict, list[tuple[str, Image.Image]]]] = []
 
         for pair in pairs:
+            row = {
+                'condition':condition,'clip_id':clip_id,'pair_type':pair.pair_type,
+                'frame_idx':pair.frame_idx,'identity_id':pair.identity_id,'action':pair.action,
+                'box_source':pair.box_source,'verifier_backend':verifier.name,'score':None,
+                'threshold':threshold,'accepted':None,'paper_valid_backend':int(verifier.paper_valid),
+                'status':'frame_or_embedding_unavailable',
+            }
+            detailed_rows.append(row)
             processed_frame = processed_source.get_frame(pair.frame_idx)
             if processed_frame is None:
                 continue
@@ -405,7 +419,7 @@ def evaluate_identity(
             if left_embedding is None or right_embedding is None:
                 continue
             score = verifier.similarity(left_embedding, right_embedding)
-            row = {
+            row.update({
                 "condition": condition,
                 "clip_id": clip_id,
                 "pair_type": pair.pair_type,
@@ -418,8 +432,8 @@ def evaluate_identity(
                 "threshold": threshold,
                 "accepted": int(score >= threshold),
                 "paper_valid_backend": int(verifier.paper_valid),
-            }
-            detailed_rows.append(row)
+                'status':'scored',
+            })
             if pair.pair_type == "target" and score < threshold:
                 target_low_risk.append((score, row, score_images))
             if pair.pair_type == "non_target" and score >= threshold:
@@ -436,6 +450,9 @@ def evaluate_identity(
             "paper_valid_backend": int(verifier.paper_valid),
             "box_source": box_source,
             "threshold": threshold,
+            'target_attempts':sum(p.pair_type=='target' for p in pairs),
+            'non_target_attempts':sum(p.pair_type=='non_target' for p in pairs),
+            'extraction_failures':sum(r['score'] is None for r in detailed_rows),
             "target_pairs": target_summary["pairs"],
             "target_mean": target_summary["mean"],
             "target_median": target_summary["median"],
@@ -459,6 +476,7 @@ def evaluate_identity(
             "threshold",
             "accepted",
             "paper_valid_backend",
+            'status',
         ]
         write_csv(output_dir / "pair_scores.csv", detailed_rows, fields)
         write_csv(output_dir / "per_clip_identity_verifier.csv", [per_clip_row])
@@ -473,6 +491,8 @@ def evaluate_identity(
                 "condition": condition,
                 "clip_id": clip_id,
                 "threshold": threshold,
+                'threshold_calibrated':False,
+                'threshold_note':'CLI threshold; external calibration must be supplied and documented by caller. Prefer score_research_identity for calibrated matrix evaluation.',
                 "max_pairs": max_pairs,
                 "gt_annotations": str(gt_annotations) if gt_annotations else None,
                 "action_metadata": str(action_metadata),

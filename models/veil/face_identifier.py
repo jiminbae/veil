@@ -98,6 +98,8 @@ face_last_seen = {}
 face_last_bbox = {}
 track_to_face = {}    
 track_last_emb = {}  
+track_last_emb_frame = {}
+track_last_emb_bbox = {}
 bbox_smoother = {}
 track_last_kps = {}    
 
@@ -207,6 +209,16 @@ def get_arcface_embedding(frame, box):
 def get_track_embedding(frame, box, track_id, current_frame):
     cached_emb = track_last_emb.get(track_id)
     cached_kps = track_last_kps.get(track_id)
+    cached_box = track_last_emb_bbox.get(track_id)
+    age = current_frame - track_last_emb_frame.get(track_id, -999999)
+    jumped = False
+    if cached_box is not None:
+        old = np.asarray(cached_box, dtype=float)
+        new = np.asarray(box, dtype=float)
+        distance = np.linalg.norm((old[:2]+old[2:]-new[:2]-new[2:])/2)
+        jumped = distance > BBOX_FALLBACK_CENTER_RATIO * max(old[2]-old[0], old[3]-old[1], 1)
+    if age > BBOX_FALLBACK_MAX_AGE or jumped:
+        cached_emb = cached_kps = None
 
     prev_box = None
 
@@ -238,6 +250,8 @@ def get_track_embedding(frame, box, track_id, current_frame):
 
     track_last_emb[track_id] = emb
     track_last_kps[track_id] = kps
+    track_last_emb_frame[track_id] = current_frame
+    track_last_emb_bbox[track_id] = list(box)
 
     return emb, kps, True
 
@@ -375,6 +389,8 @@ def cleanup_old_face_ids(current_frame):
         if face_id in expired_face_ids:
             track_to_face.pop(track_id, None)
             track_last_emb.pop(track_id, None)
+            track_last_emb_frame.pop(track_id, None)
+            track_last_emb_bbox.pop(track_id, None)
             track_last_kps.pop(track_id, None)
             target_track_ids.discard(track_id)
 

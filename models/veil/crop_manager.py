@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 from config import (
     SWAP_MIN_FACE_AREA,
@@ -70,19 +71,20 @@ def assess_face_quality(frame, bbox, embedding, crop):
     return "GOOD", reasons
 
 
-def apply_fallback_blur(frame, bbox):
+def apply_fallback_blur(frame, bbox, *, return_status=False):
     clipped = clip_bbox(frame, bbox)
 
     if clipped is None:
-        return frame
+        return (frame, False) if return_status else frame
 
     x1, y1, x2, y2 = clipped
     roi = frame[y1:y2, x1:x2]
 
     if roi.size == 0:
-        return frame
+        return (frame, False) if return_status else frame
 
     blur = cv2.GaussianBlur(roi, (45, 45), 0)
+    changed = bool(np.any(roi != blur))
     frame[y1:y2, x1:x2] = blur
 
-    return frame
+    return (frame, changed) if return_status else frame
