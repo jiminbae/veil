@@ -12,6 +12,7 @@ from matplotlib.ticker import PercentFormatter
 import numpy as np
 from tools.aggregate_research_results import CONDITIONS,read_csv,number
 from tools.prepare_research_inputs import write_json
+from tools.evaluate_research_run import csv_write
 
 BLUE='#295D9C';ORANGE='#D88B22';GRAY='#8F9DAA';DARK='#23303D'
 SHORT={'full':'full','no_identity_lock':'no identity\nlock','no_blur_fallback':'no blur\nfallback',
@@ -32,9 +33,9 @@ def plot(output):
         candidates=[r for r in rows if r['condition']==condition and r['metric']==metric
             and r['aggregation']==aggregation and r.get('backend','')==backend and r.get('group','')==group]
         return number(candidates[0]['value']) if candidates else None
-    def save(fig,name,note):
+    def save(fig,name,note,top=1):
         fig.text(.02,.015,note,fontsize=9,ha='left',va='bottom',wrap=True)
-        fig.tight_layout(rect=(0,.10,1,1))
+        fig.tight_layout(rect=(0,.10,1,top))
         for suffix in ['png','svg']:fig.savefig(figdir/(name+'.'+suffix),dpi=180,bbox_inches='tight')
         plt.close(fig);generated.append(name)
     fig,ax=plt.subplots(figsize=(12,5.8))
@@ -53,7 +54,7 @@ def plot(output):
     ax.set(xticks=x,xticklabels=labels,ylim=(0,1.12),ylabel='Clip-macro face-observation rate',
         title='Projected-label target preservation and potential non-target exposure')
     ax.yaxis.set_major_formatter(PercentFormatter(1));ax.legend(loc='upper center',ncol=2,frameon=False)
-    save(fig,'target_preservation_and_exposure',scope+'\nWhiskers: 95% sequence-cluster bootstrap. Exposure includes missed/unknown faces; this is not a re-identification rate.')
+    save(fig,'target_preservation_and_exposure',scope+'\nWhiskers: 95% sequence-cluster bootstrap. Valid clip denominators are in aggregate_metrics.csv. Exposure includes missed/unknown faces, not re-identification.')
     fig,ax=plt.subplots(figsize=(12,5.8));bottom=np.zeros(len(x))
     for metric,label,color,hatch in [('derived_nontarget_swap_fraction','Swap',BLUE,None),('derived_nontarget_blur_fraction','Blur',ORANGE,'//')]:
         values=np.array([value(c,metric) for c in CONDITIONS],dtype=float);ax.bar(x,values,bottom=bottom,color=color,label=label,hatch=hatch);bottom+=values
@@ -89,19 +90,29 @@ def plot(output):
     quality_path=output/'quality_metrics.csv'
     if quality_path.exists() and (output/'independent_identity_verifier/per_clip_verifier_metrics.csv').exists():
         quality=read_csv(quality_path);fig,axes=plt.subplots(1,2,figsize=(15,6),sharey=True)
+        verifier=read_csv(output/'independent_identity_verifier/per_clip_verifier_metrics.csv')
+        quality_map={(r['condition'],r['clip_id']):r for r in quality};source_rows=[]
         for ax,backend,color in zip(axes,['adaface','facenet'],[BLUE,ORANGE]):
             for idx,c in enumerate(CONDITIONS):
-                values=[number(r['excess_mae_0_255']) for r in quality if r['condition']==c]
-                values=[v for v in values if v is not None]
-                risk=value(c,'accept_rate_successful_pairs','clip_macro',backend=backend,group='non_target')
-                if values and risk is not None:
-                    xx=float(np.mean(values));ax.scatter([xx],[risk],color=color,marker=['o','s','^','D','v','P'][idx],s=65,label=c.replace('_',' '))
+                pairs=[]
+                for r in verifier:
+                    if r['condition']!=c or r['backend']!=backend or r['group']!='non_target':continue
+                    q=quality_map.get((c,r['clip_id']))
+                    if q is None:continue
+                    mae=number(q['excess_mae_0_255']);risk=number(r['accept_rate_successful_pairs'])
+                    if mae is not None and risk is not None:pairs.append((r['clip_id'],mae,risk))
+                if pairs:
+                    xx=float(np.mean([p[1] for p in pairs]));risk=float(np.mean([p[2] for p in pairs]))
+                    ax.scatter([xx],[risk],color=color,marker=['o','s','^','D','v','P'][idx],s=65,label=c.replace('_',' '))
+                    source_rows.append({'backend':backend,'condition':c,'paired_clips':len(pairs),
+                        'target_excess_mae':xx,'conditional_acceptance':risk,'clip_ids':json.dumps([p[0] for p in pairs])})
             ax.set(xlabel='Target ROI excess MAE over same-codec control (0–255)',ylabel='Clip-macro acceptance among scored non-target pairs',ylim=(-.03,1.12),title=backend)
             ax.yaxis.set_major_formatter(PercentFormatter(1));ax.margins(x=.25)
         handles,names=axes[0].get_legend_handles_labels()
         fig.legend(handles,names,loc='upper center',bbox_to_anchor=(.5,.93),ncol=3,frameon=False,fontsize=10)
         fig.suptitle('Target pixel preservation and conditional re-identification',fontsize=15,fontweight='bold')
-        save(fig,'utility_vs_reidentification',scope+'\nOverlapping markers indicate coincident values. MAE is target pixel change, not perceptual quality. Verifier axis conditions on successful extraction.')
+        csv_write(figdir/'utility_vs_risk_source.csv',source_rows)
+        save(fig,'utility_vs_reidentification',scope+'\nBoth axes use the same valid clips; counts in utility_vs_risk_source.csv. Coincident markers overlap. MAE is not perceptual quality; verifier excludes extraction failures.',top=.80)
     else:omitted['utility_vs_reidentification']='Quality or real-verifier measurements unavailable'
     fig,ax=plt.subplots(figsize=(12,5.8))
     data=[[float(r['end_to_end_fps']) for r in runtime if r['condition']==c] for c in CONDITIONS]

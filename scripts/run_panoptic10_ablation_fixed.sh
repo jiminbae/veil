@@ -8,10 +8,11 @@ PYTHON_BIN="${PYTHON_BIN:-$REPO_ROOT/.venv/bin/python}"
 MANIFEST="${MANIFEST:-data/panoptic_veil_materialized_10/materialized_manifest.jsonl}"
 REVIEW_CSV="${REVIEW_CSV:-data/panoptic_veil_materialized_10/review/panoptic_10_review.csv}"
 REPLACEMENT_IMAGE="${REPLACEMENT_IMAGE:-models/veil/virtual_face/fake_face.jpg}"
-OUTPUT_DIR="${OUTPUT_DIR:-data/panoptic_veil_materialized_10/benchmarks/panoptic10_ablation_fixed}"
-PAPER_RESULTS_DIR="${PAPER_RESULTS_DIR:-paper_results/panoptic10_ablation_fixed}"
+RUN_ID="${RUN_ID:-panoptic10_fixed_$(date -u +%Y%m%dT%H%M%SZ)}"
+OUTPUT_DIR="${OUTPUT_DIR:-data/panoptic_veil_materialized_10/benchmarks/$RUN_ID}"
+PAPER_RESULTS_DIR="${PAPER_RESULTS_DIR:-paper_results/$RUN_ID}"
 TIMEOUT_SEC="${TIMEOUT_SEC:-1800}"
-CLEAN_OUTPUT="${CLEAN_OUTPUT:-1}"
+CLEAN_OUTPUT="${CLEAN_OUTPUT:-0}"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
   echo "Python executable not found or not executable: $PYTHON_BIN" >&2
@@ -26,8 +27,11 @@ for path in "$MANIFEST" "$REVIEW_CSV" "$REPLACEMENT_IMAGE"; do
 done
 
 if [[ "$CLEAN_OUTPUT" == "1" ]]; then
-  echo "[clean] Removing previous fixed benchmark outputs"
-  rm -rf "$OUTPUT_DIR" "$PAPER_RESULTS_DIR"
+  if [[ -e "$OUTPUT_DIR" || -e "$PAPER_RESULTS_DIR" ]]; then
+    echo "Refusing to remove previous outputs. Choose fresh OUTPUT_DIR and PAPER_RESULTS_DIR." >&2
+    exit 2
+  fi
+  echo "[fresh] New output directories requested; previous runs are preserved"
 else
   echo "[clean] CLEAN_OUTPUT=$CLEAN_OUTPUT, keeping existing outputs and using --skip-existing"
 fi
