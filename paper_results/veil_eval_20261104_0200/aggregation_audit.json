@@ -1,0 +1,14 @@
+{
+  "bootstrap_seed": 20261104,
+  "completed_rows": 126,
+  "failed_rows_retained": 0,
+  "primary_cluster_unit": "sequence",
+  "recording_day_sensitivity": true,
+  "resamples": 2000,
+  "source_files": [
+    "per_clip_metrics.csv",
+    "runtime_metrics.csv",
+    "independent_identity_verifier/per_clip_verifier_metrics.csv"
+  ],
+  "unique_per_clip_keys": true
+}

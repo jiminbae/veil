@@ -1,0 +1,10 @@
+{
+  "boundary_frame_overlaps": [],
+  "clips": 21,
+  "fetched_official_annotation_frames": 6295,
+  "human_validated_annotations": 0,
+  "requested_official_annotation_frames": 6295,
+  "source_intervals": "nominal ten seconds; actual frame timestamps/duration disclosed",
+  "unique_clip_hashes": 21,
+  "unique_clip_ids": 21
+}

@@ -1,0 +1,21 @@
+{
+  "completed_runs": 6,
+  "condition_metrics_csv": "$HOME/veil/local_research/veil_eval_20261104_0200/supplement/benchmark/condition_metrics.csv",
+  "conditions": [
+    "full",
+    "no_identity_lock",
+    "no_blur_fallback",
+    "selective_blur_only",
+    "no_mouth_paste",
+    "no_swap_cache"
+  ],
+  "dry_run": false,
+  "failed_runs": 6,
+  "output_dir": "$HOME/veil/local_research/veil_eval_20261104_0200/supplement/benchmark",
+  "replacement_image": "$HOME/veil/media/fake_face.jpg",
+  "selected_clips": [
+    "chokepoint_P2E_S5_C2",
+    "chokepoint_P2L_S5_C2"
+  ],
+  "total_runs": 12
+}

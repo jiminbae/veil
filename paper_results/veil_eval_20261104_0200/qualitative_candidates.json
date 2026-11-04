@@ -1,0 +1,42 @@
+{
+  "candidates": [
+    {
+      "annotation_status": "unverified_official_3d_projection",
+      "candidate_id": "candidate_01",
+      "clip_id": "170221_haggling_m1_hd_00_08_0001750000",
+      "frame_idx": 291,
+      "human_quality_review": false,
+      "local_directory": "qualitative_candidates/candidate_01",
+      "person_id": "4",
+      "publication_status": "not_approved; Panoptic modified imagery requires organizer permission",
+      "score": 0.9599832892417908,
+      "selection_rule": "highest_full_nontarget_score_adaface"
+    },
+    {
+      "annotation_status": "unverified_official_3d_projection",
+      "candidate_id": "candidate_02",
+      "clip_id": "170221_haggling_m1_hd_00_08_0001750000",
+      "frame_idx": 291,
+      "human_quality_review": false,
+      "local_directory": "qualitative_candidates/candidate_02",
+      "person_id": "4",
+      "publication_status": "not_approved; Panoptic modified imagery requires organizer permission",
+      "score": 0.9812703728675842,
+      "selection_rule": "highest_full_nontarget_score_facenet"
+    },
+    {
+      "annotation_status": "unverified_official_3d_projection",
+      "candidate_id": "candidate_03",
+      "clip_id": "170224_haggling_a1_hd_00_27_0002950000",
+      "frame_idx": 17,
+      "human_quality_review": false,
+      "local_directory": "qualitative_candidates/candidate_03",
+      "person_id": "9",
+      "publication_status": "not_approved; Panoptic modified imagery requires organizer permission",
+      "score": null,
+      "selection_rule": "lowest_projected_target_preservation_clip_first_altered_frame"
+    }
+  ],
+  "images_in_git": false,
+  "scope": "Actual decoded clean output and source frames; no aesthetic curation or human quality rating"
+}

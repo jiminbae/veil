@@ -1,0 +1,147 @@
+{
+  "analysis_source_sha256": {
+    "tools/__init__.py": "dfff3deacd2555dae87139562b8bf7d36193449c49767fa2f02c8045b9e95044",
+    "tools/aggregate_research_results.py": "e0224030b70bfc281e406d260e7a6c568922390e495b17554d619a2c94d2ae7e",
+    "tools/ava_review_materialized.py": "36f4da2269cfc860cc5981c3ce7d3c4be24c6a992d8cdb3984c9da9313ef1abf",
+    "tools/ava_veil_protocol.py": "117afd77ae6316c5e21264497844dd4a102c8b4135bb79099aa1ccefee53760d",
+    "tools/calibrate_independent_verifiers.py": "4645b19c34ee7a4891b42e6af7abf233caeff899b078fe9d9f7c252c12e72805",
+    "tools/capture_research_environment.py": "0c026dcaa7f6281f664ed5cb0d6e15dceb264b3407cdbb61a12730ca93beb3bc",
+    "tools/check_calibration_device_sensitivity.py": "861d460b54fb2ad610b34bd48927dc7955176644bd251190a58c799c32d6e5ad",
+    "tools/create_annotation_review.py": "e0c317441737a452e980b440fbdc3bbd4d8ac828bf2ed081e1110a28cdbed305",
+    "tools/create_local_qualitative_candidates.py": "fadc05f0313b103f1ff00545593b981ae7dcf0b932ecaa48966b723992696f26",
+    "tools/diagnose_zero_swap.py": "84f36df634f9e199c75b650634de0922ce38cc8b7e4cf396f123ba4b947f92f7",
+    "tools/eval_identity_verifier.py": "60234dcc7ab55791009b7c4239ca6373dbd7831cd65b3f22cafecdc6a0916b5a",
+    "tools/evaluate_research_run.py": "f03beb0cdb44ae95f66676890e928fb6350d5740279358f8cad5fd651575848e",
+    "tools/evaluate_research_utility.py": "27cdce319828e9807ceccddcc5b36b3a8eb16bff3b20d4d5a6411030737e57f6",
+    "tools/evaluate_veil_metadata.py": "e468ee6b44b9900e8af498e23c5ca5f713c2cd4660dc5555a22dc7d1ff927f3b",
+    "tools/independent_verifiers.py": "286c4bde63e69931b5fcb941b7e8725be976adbea1b7867b024971a14fe0b77d",
+    "tools/make_panoptic_benchmark_review.py": "5d2de558926ae966d1cbe6f01a13736121f5d7bbc058fecf3da3d1b6b2b5013f",
+    "tools/package_benchmark_results.py": "3d29410c10d25012ad0e7d6e3259c24c77383f3fa6bc06d9b3ab1af1fd6d8405",
+    "tools/package_research_evidence.py": "2acda789436194326aeb2aa14af96bcfd81467a30692ef10848313fe60dc52a3",
+    "tools/panoptic_veil_protocol.py": "38431f076a67efc04c865d398e350e32573d0f41d4bbb0edbb02a22d156e4c09",
+    "tools/plot_research_results.py": "da41939d090104210c3bbef98c0be54adf9dcbdd449b31fa7bf05d0bf5653ea0",
+    "tools/prepare_chokepoint_supplement.py": "74a49938545bd8600b34680439d401a8e227be8c44df52bfe0e784f7272bc097",
+    "tools/prepare_research_inputs.py": "86c7611db87858f1ae4aa11db5cb36c22701c1e75891e873d9473b6a4e0cd8bc",
+    "tools/project_panoptic_annotations.py": "b192021ade11427535eaebe679536dc40a6d809de09627dad07c006694162d97",
+    "tools/recover_historical_stress_inputs.py": "836e08421026dcee31d40694117319ec6c144c91c83c6867f60ad934ac1cc2b3",
+    "tools/run_research_postprocessing.py": "45a0ecae17d9947a1cbf5f3b015ddb3a9c6700c3865c5073637aac5e7ce45f98",
+    "tools/run_veil_benchmark.py": "a040c77b924ebb8401451cc60c3c5b3c32e2134aefa5c8dc29f1e90e17188d0a",
+    "tools/score_research_identity.py": "7a3100569a16ac2d0cb0f37045e68b5445688e27dcde9ade3ddb9882658fc5d5",
+    "tools/write_research_delivery.py": "028f64811be3d7d92a09bd855cd79e9c017f785c097b01af7f45ccda2331bff9"
+  },
+  "baseline_commit": "e14d89f82fe7610965513996e686739046fd90e1",
+  "bootstrap_seed": 20261104,
+  "evaluation_code_commit": "ded43b7a4bc3f359d5db7001d78e664d7a584447",
+  "historical_artifacts_sha256": {
+    "paper_results/panoptic20_ablation/README.md": "60c00b25c902d602488dd531343276922a0a06fc89c744d5c313c38fa7d50d22",
+    "paper_results/panoptic20_ablation/accepted_manifest.jsonl": "b9d431329afcd2541cc67ce4d9608394c8aff5b2082f5277039fc7effdd8679e",
+    "paper_results/panoptic20_ablation/accepted_summary.json": "e8c25b485cd218205732d3fa3eb46c752517bb90113bbd8e35a5c496c9bda45c",
+    "paper_results/panoptic20_ablation/analysis_summary.json": "2aae3c58a5c3989ee1beec050c890b9ba5ba90fec0758154a8a8999f797e6930",
+    "paper_results/panoptic20_ablation/analysis_summary.md": "9fe6ef975b1ccc23638e6bfef3a132e0c1cdc6bfe9cf9993da0223f0ce521c91",
+    "paper_results/panoptic20_ablation/benchmark_summary.json": "63782e071be2537de483a39402227f486db46bc1244ba96370ce33a067ebac67",
+    "paper_results/panoptic20_ablation/condition_metrics.csv": "cd20edd339fdf9aa4fc7c6ec60519b02f692b27f60744130b2522a38eea2a395",
+    "paper_results/panoptic20_ablation/full/aggregate_metrics.json": "9712df2c6558d55efc4b53999d9bbe486eddf161e0189e191d984447e88ee0df",
+    "paper_results/panoptic20_ablation/full/condition_config.json": "7584914d67640eb4051abc1fb3628c9289b2101a9a20377fcaaa0dfca35e6c80",
+    "paper_results/panoptic20_ablation/full/evaluation_config.json": "035c411950e4f87edee5336bd9dbdc1c0c31a0b9ef1a1bad434f15914335b6c7",
+    "paper_results/panoptic20_ablation/full/per_clip_metrics.csv": "429a222febf5c5c0a917db2266d12b2ff7bdc7c5423b3f550a9e38790140dd74",
+    "paper_results/panoptic20_ablation/manual_output_review.csv": "188ac5e54a74b9081b7839c29da250efc89da1a064374e39dce9e7f5e7667644",
+    "paper_results/panoptic20_ablation/manual_output_review_summary.json": "4280239f37255d7e6806d438f4ed0720c96eadba66f516612555b80ae2e640db",
+    "paper_results/panoptic20_ablation/manual_output_review_summary.md": "f491563ec1b5f637fdfdd678ae5afd7476bf6ca9f9ecf5a362ff44f72bbe1f83",
+    "paper_results/panoptic20_ablation/no_blur_fallback/aggregate_metrics.json": "e6c8c8d3a1b4e1025fe8748eab8bb82824096d0a829a2e8dd5eec17f07b10b34",
+    "paper_results/panoptic20_ablation/no_blur_fallback/condition_config.json": "dc7e0e152a0ab6d15bb77916e03954317ec7fac89abb874935b18f0d9de3118b",
+    "paper_results/panoptic20_ablation/no_blur_fallback/evaluation_config.json": "811931b3534f9d10ce91a99daf3b4b2b6f70d7a34f93eab5bddef743b30487f5",
+    "paper_results/panoptic20_ablation/no_blur_fallback/per_clip_metrics.csv": "ff93a81481c39033f881e8f9720338677a590f1bc5d34bbce7feae77ff070280",
+    "paper_results/panoptic20_ablation/no_identity_lock/aggregate_metrics.json": "6088f789b2c92dc5e1aa851c9aec8f8f62e6b528cb37517b734d6fbbd045cc0a",
+    "paper_results/panoptic20_ablation/no_identity_lock/condition_config.json": "b223fcb3c8f3fccf70dbdf5edd1450e9669f09f3d127a45ecfd1a1c5ccd57253",
+    "paper_results/panoptic20_ablation/no_identity_lock/evaluation_config.json": "035c411950e4f87edee5336bd9dbdc1c0c31a0b9ef1a1bad434f15914335b6c7",
+    "paper_results/panoptic20_ablation/no_identity_lock/per_clip_metrics.csv": "70091056e7c2b88c2389500bf8b6962640293d7b16b4279fec07c0b0d4ac5396",
+    "paper_results/panoptic20_ablation/run_summary.csv": "403fddcb710cc801cb7ade2aec4e801dee7fe1eb95338f5bbcb660d152406e35",
+    "paper_results/panoptic20_ablation/run_summary.json": "d21519137fff3ac6786a9f69a2564963d78484296434e82018380b3d2eb93bb8",
+    "paper_results/panoptic20_ablation/source_review_accepted.csv": "b51dc5c4a3fd41199cbc8bb00a93c32fe1cf6f56e5436e775c056fcc2a409304",
+    "paper_results/panoptic20_ablation/source_review_base20_summary.json": "875a0edfb417534ef0c254dacb7e68277edf0028c7b0d135172a93b88639b325",
+    "paper_results/panoptic20_ablation/source_review_supplement10_summary.json": "822c72c6fe13fe53b3ae5e915c796e9b810dfb0a55c84b9f9c35082e6e6d448c"
+  },
+  "human_verification_status": "pending; no human reviewer participated in this run",
+  "independent_original_pts_spotcheck": {
+    "clip_id": "170221_haggling_b2_hd_00_27_0001350000",
+    "first_source_frame": 4046,
+    "first_source_pts_sec": 135.002,
+    "scope": "one clip, not exhaustive timing validation"
+  },
+  "inference_determinism": "no stochastic augmentation; deterministic CUDA algorithms not forced; numerical drift across environments possible",
+  "initial_working_tree": "clean main; no pre-existing user changes",
+  "origin": "https://github.com/jiminbae/veil",
+  "postprocessing_phases": {
+    "primary_actions": {
+      "elapsed_sec": 73.97337867104216,
+      "finished_utc": "2026-11-04T01:17:40.627846+00:00",
+      "returncode": 0,
+      "started_utc": "2026-11-04T01:16:26.654470+00:00",
+      "status": "completed"
+    },
+    "primary_aggregate": {
+      "elapsed_sec": 8.358242752961814,
+      "finished_utc": "2026-11-04T01:30:31.677260+00:00",
+      "returncode": 0,
+      "started_utc": "2026-11-04T01:30:23.319013+00:00",
+      "status": "completed"
+    },
+    "primary_figures": {
+      "elapsed_sec": 2.6419174020411447,
+      "finished_utc": "2026-11-04T01:30:34.322665+00:00",
+      "returncode": 0,
+      "started_utc": "2026-11-04T01:30:31.680743+00:00",
+      "status": "completed"
+    },
+    "primary_utility": {
+      "elapsed_sec": 160.7587930940208,
+      "finished_utc": "2026-11-04T01:30:23.317855+00:00",
+      "returncode": 0,
+      "started_utc": "2026-11-04T01:27:42.559059+00:00",
+      "status": "completed"
+    },
+    "primary_verification": {
+      "elapsed_sec": 601.9256143519888,
+      "finished_utc": "2026-11-04T01:27:42.554814+00:00",
+      "returncode": 0,
+      "started_utc": "2026-11-04T01:17:40.629193+00:00",
+      "status": "completed"
+    },
+    "supplement_actions": {
+      "elapsed_sec": 1.235451694985386,
+      "finished_utc": "2026-11-04T01:30:35.559538+00:00",
+      "returncode": 0,
+      "started_utc": "2026-11-04T01:30:34.324081+00:00",
+      "status": "completed"
+    },
+    "supplement_processing": {
+      "elapsed_sec": 143.9403334989911,
+      "finished_utc": "2026-11-04T01:08:24.861277+00:00",
+      "returncode": 1,
+      "started_utc": "2026-11-04T01:06:00.920941+00:00",
+      "status": "completed_with_failed_inputs"
+    },
+    "supplement_utility": {
+      "elapsed_sec": 2.2653389329789206,
+      "finished_utc": "2026-11-04T01:31:04.723325+00:00",
+      "returncode": 0,
+      "started_utc": "2026-11-04T01:31:02.457981+00:00",
+      "status": "completed"
+    },
+    "supplement_verification": {
+      "elapsed_sec": 26.890341453021392,
+      "finished_utc": "2026-11-04T01:31:02.453802+00:00",
+      "returncode": 0,
+      "started_utc": "2026-11-04T01:30:35.563455+00:00",
+      "status": "completed"
+    }
+  },
+  "processing_code_commit": "df04db2ad5706dc27fe8a1d1f45aedb442d2800c",
+  "processing_finished_utc": "2026-11-04T01:05:58.216964+00:00",
+  "processing_started_utc": "2026-11-04T00:10:01.479089+00:00",
+  "processing_workers": 1,
+  "raw_records_local_only": "inputs, source/output video, crops, labels, score ledgers and embeddings under ignored local_research",
+  "results_commit": "resolve: git log -1 --format=%H -- paper_results/veil_eval_20261104_0200",
+  "run_id": "veil_eval_20261104_0200",
+  "transport": "original official Panoptic HTTP endpoints; HTTPS weak-certificate failure recorded"
+}

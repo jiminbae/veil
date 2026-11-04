@@ -1,0 +1,10 @@
+{
+  "byte_identical": true,
+  "sha256": {
+    "aggregate_metrics.csv": "459bceb64aa3dd80dd48e623520b1c5a4d31b15ebc14ef165170e76d36adc381",
+    "aggregate_metrics.json": "f6210c35ed402421c95f97594e0e2f1586ffa1f201f89f5e2d17d04e5887cb20",
+    "paired_comparisons.csv": "4af89c6a1f1e5746073837055e5c0ca4feb59b4d1bb356a7ee6e0a4eb4857158",
+    "confidence_intervals.csv": "cc552feb15ee23d7a209c7e98bee8ea48fc4a4d1ed6ed4f49f7a6e2e06447aae",
+    "leave_one_sequence_out.csv": "2bf5ac385df320c42bc8778273da52a9d4cf9775e448a8ba91b8242a659e661e"
+  }
+}

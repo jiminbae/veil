@@ -1,0 +1,71 @@
+{
+  "independent_models": {
+    "adaface": {
+      "alignment": "MTCNN five landmarks; least-squares similarity to official 112x112 template",
+      "architecture_sha256": "b4db4eb0174a385fd29e5f616391b50d443f455990c8b88dcab1f8021af8ba4c",
+      "backend": "adaface",
+      "channel_order": "BGR",
+      "checkpoint_sha256": "234da6ce931f821e0a8e920063dc2091d8122ea46285c159d2f25d3f762fecb3",
+      "checkpoint_source": "https://drive.google.com/file/d/1eUaSHG4pGlIZK7hBkqjyp2fc2epKoBvI/view",
+      "code_license": "MIT; training dataset and checkpoint terms are separate",
+      "detector": "facenet-pytorch MTCNN; no VEIL detector or cache",
+      "device": "cuda:0",
+      "embedding_dimension": 512,
+      "facenet_pytorch_source": "https://github.com/timesler/facenet-pytorch",
+      "input_size": [
+        112,
+        112
+      ],
+      "model": "AdaFace IR50 MS1MV2",
+      "normalization": "(pixel/255-0.5)/0.5",
+      "similarity": "cosine; unit normalized embeddings",
+      "source": "https://github.com/mk-minchul/AdaFace"
+    },
+    "facenet": {
+      "alignment": "official MTCNN bbox crop, margin 0; no landmark warp",
+      "backend": "facenet",
+      "channel_order": "RGB",
+      "checkpoint_sha256": "281cebca8662831adb987a874bdcb36e73f5b1c6dc5ee5878f305e985625d99b",
+      "checkpoint_source": "https://github.com/timesler/facenet-pytorch/releases/tag/v2.2.9",
+      "code_license": "MIT; training dataset and checkpoint terms are separate",
+      "detector": "facenet-pytorch MTCNN; no VEIL detector or cache",
+      "device": "cuda:0",
+      "embedding_dimension": 512,
+      "facenet_pytorch_source": "https://github.com/timesler/facenet-pytorch",
+      "input_size": [
+        160,
+        160
+      ],
+      "model": "InceptionResnetV1 VGGFace2",
+      "normalization": "(pixel-127.5)/128",
+      "similarity": "cosine; unit normalized embeddings"
+    }
+  },
+  "independent_mtcnn_weight_sha256": {
+    "onet.pt": "165bfbe42940416ccfb977545cf0e976d5bf321f67083ae2aaaa5c764280118d",
+    "pnet.pt": "a2a71925e0b9996a42f63e47efc1ca19043e69558b5c523b978d611dfae49c8f",
+    "rnet.pt": "bbb937de72efc9ef83b186c49f5f558467a1d7e3453a8ece0d71a886633f6a86"
+  },
+  "license_notes": {
+    "AdaFace": "official code MIT; checkpoint/training-data terms separate; research use; no weights redistributed",
+    "FaceNet": "facenet-pytorch code MIT; VGGFace2 training-data rights separate; no weights redistributed",
+    "InsightFace_pretrained": "non-commercial research weights; no redistribution here",
+    "YOLO": "project author release; Ultralytics code terms and training-data rights are separate"
+  },
+  "processing_model_sha256": {
+    "1k3d68.onnx": "df5c06b8a0c12e422b2ed8947b8869faa4105387f199c477af038aa01f9a45cc",
+    "2d106det.onnx": "f001b856447c413801ef5c42091ed0cd516fcd21f2d6b79635b1e733a7109dbf",
+    "adaface_ir50_ms1mv2.ckpt": "234da6ce931f821e0a8e920063dc2091d8122ea46285c159d2f25d3f762fecb3",
+    "det_10g.onnx": "5838f7fe053675b1c7a08b633df49e7af5495cee0493c7dcf6697200b85b5b91",
+    "genderage.onnx": "4fde69b1c810857b88c64a335084f1c3fe8f01246c9a191b48c7bb756d6652fb",
+    "inswapper_128.onnx": "e4a3f08c753cb72d04e10aa0f7dbe3deebbf39567d4ead6dce08e98aa49e16af",
+    "w600k_r50.onnx": "4c06341c33c2ca1f86781dab0e829f88ad5b64be9fba56e56bc9ebdefc619e43",
+    "yolo26x-face.pt": "f749791ce9205e2df8bbb479201bce09b43423cac7f8e84d19cae6a01d0cea22"
+  },
+  "processing_sources": {
+    "buffalo_l": "https://github.com/deepinsight/insightface/tree/master/model_zoo",
+    "inswapper_128.onnx": "https://huggingface.co/ezioruan/inswapper_128.onnx",
+    "yolo26x-face.pt": "https://github.com/jiminbae/yolo26x-face/releases/tag/v0.1.0"
+  },
+  "unused_processing_fingerprint_file": "AdaFace checkpoint is hashed alongside local weights but used only by the independent verifier, not by VEIL processing"
+}

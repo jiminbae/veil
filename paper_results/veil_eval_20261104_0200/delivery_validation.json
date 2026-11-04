@@ -1,0 +1,45 @@
+{
+  "checked_utc": "2026-11-04T01:41:30.492683+00:00",
+  "evaluation_commit": "ded43b7a4bc3f359d5db7001d78e664d7a584447",
+  "extraction_stage_embedding_counts_reconcile": true,
+  "figure_review": {
+    "count": 7,
+    "formats": [
+      "PNG",
+      "SVG"
+    ],
+    "rendered_pngs_inspected": true,
+    "scope": "Labels, clipping, legends, denominators and visible data presentation; not human face/annotation/quality review"
+  },
+  "full_clip_hash_duplicates": 0,
+  "git_policy": "new research branch only; no repository configuration or main updates",
+  "historical_artifacts_unchanged": true,
+  "human_gt_validation": false,
+  "primary_actual_decoded_frames": 6295,
+  "primary_processed_frames_all_conditions": 37770,
+  "processing_commit": "df04db2ad5706dc27fe8a1d1f45aedb442d2800c",
+  "qualitative_candidates": {
+    "actual_local_candidates": 3,
+    "images_in_git": false,
+    "publication_approved": false
+  },
+  "result_commit": "resolve: git log -1 --format=%H -- paper_results/veil_eval_20261104_0200",
+  "sampled_roi_audit": {
+    "invalid": 0,
+    "primary_nonempty": 2682,
+    "secondary_nonempty": 554
+  },
+  "secondary_runs": {
+    "attempted": 12,
+    "completed": 6,
+    "failed": 6
+  },
+  "source_index_overlap_count": 0,
+  "statistical_tables_byte_identical_on_regeneration": true,
+  "supplemental_reporting_commit": "c71be97cdb394cbf45534f8a71bbac7f9af6a2c6",
+  "tests": {
+    "command": "OMP_NUM_THREADS=2 .venv/bin/python -m pytest -q",
+    "log": "test_results.log",
+    "passed": 47
+  }
+}

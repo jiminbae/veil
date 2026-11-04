@@ -1,0 +1,177 @@
+{
+  "clean_output": true,
+  "common_auxiliary_state": {
+    "cache_spatial_jump_ratio": 0.75,
+    "embedding_cache_max_age_frames": 30,
+    "embedding_refresh_interval": 5,
+    "target_hold_frames": 60
+  },
+  "conditions": {
+    "full": {
+      "blur_fallback_enabled": true,
+      "changes_from_full": {},
+      "description": "default VEIL with identity lock, face swap, and blur fallback",
+      "enable_face_swap": true,
+      "enable_mouth_paste": true,
+      "enable_swap_cache": true,
+      "identity_lock_enabled": true
+    },
+    "no_blur_fallback": {
+      "blur_fallback_enabled": false,
+      "changes_from_full": {
+        "blur_fallback_enabled": false
+      },
+      "description": "fallback blur is disabled after failed swaps or low-quality background faces",
+      "enable_face_swap": true,
+      "enable_mouth_paste": true,
+      "enable_swap_cache": true,
+      "identity_lock_enabled": true
+    },
+    "no_identity_lock": {
+      "blur_fallback_enabled": true,
+      "changes_from_full": {
+        "identity_lock_enabled": false
+      },
+      "description": "temporal identity lock is disabled; only direct target matches are preserved",
+      "enable_face_swap": true,
+      "enable_mouth_paste": true,
+      "enable_swap_cache": true,
+      "identity_lock_enabled": false
+    },
+    "no_mouth_paste": {
+      "blur_fallback_enabled": true,
+      "changes_from_full": {
+        "enable_mouth_paste": false
+      },
+      "description": "full with original mouth restoration disabled",
+      "enable_face_swap": true,
+      "enable_mouth_paste": false,
+      "enable_swap_cache": true,
+      "identity_lock_enabled": true
+    },
+    "no_swap_cache": {
+      "blur_fallback_enabled": true,
+      "changes_from_full": {
+        "enable_swap_cache": false
+      },
+      "description": "full with rendered swap patch cache writes and reads disabled",
+      "enable_face_swap": true,
+      "enable_mouth_paste": true,
+      "enable_swap_cache": false,
+      "identity_lock_enabled": true
+    },
+    "selective_blur_only": {
+      "blur_fallback_enabled": true,
+      "changes_from_full": {
+        "enable_face_swap": false
+      },
+      "description": "target-aware baseline that preserves protected targets and blurs all non-target faces",
+      "enable_face_swap": false,
+      "enable_mouth_paste": true,
+      "enable_swap_cache": true,
+      "identity_lock_enabled": true
+    }
+  },
+  "declared_but_unused_config_keys": [
+    "STITCH_BLUR_KERNEL",
+    "SIDE_FACE_CENTER_RATIO_THRESHOLD",
+    "ENABLE_OCCLUSION_FALLBACK",
+    "ENABLE_MASK_BLEND",
+    "SWAP_FEATHER_RATIO",
+    "SWAP_MASK_BLUR_KERNEL"
+  ],
+  "implementation_map": {
+    "full": {
+      "functions": [
+        "prepare_track",
+        "FaceSwapper.swap_many_into_frame",
+        "paste_cached_swap",
+        "finalize_track"
+      ]
+    },
+    "no_blur_fallback": {
+      "config": "ENABLE_FALLBACK_BLUR=False",
+      "function": "finalize_track; failed/ineligible uncached faces remain UNPROCESSED"
+    },
+    "no_identity_lock": {
+      "config": "IDENTITY_LOCK_ENABLED=False",
+      "function": "prepare_track; skip temporal lock branch",
+      "retained": [
+        "get_track_embedding cache",
+        "BoT-SORT",
+        "stable-ID association"
+      ]
+    },
+    "no_mouth_paste": {
+      "config": "ENABLE_MOUTH_PASTE=False before import",
+      "function": "FaceSwapper original-mouth compositing guard"
+    },
+    "no_swap_cache": {
+      "config": "ENABLE_SWAP_CACHE=False",
+      "function": "main disables swap_patch_cache writes and paste_cached_swap reads"
+    },
+    "selective_blur_only": {
+      "config": "ENABLE_FACE_SWAP=False",
+      "function": "main skips swapper and cache read; finalize_track blurs background"
+    }
+  },
+  "no_identity_lock_note": "embedding cache, tracking and stable-ID association remain; not frame-independent",
+  "no_swap_cache_status": "applicable: cache is read by render path; actual uses appear in per_clip_metrics",
+  "per_clip_paths": "input manifest; target registration and replacement are distinct",
+  "shared_config": {
+    "APPEARANCE_THRESH": 0.45,
+    "DETECTION_CONF": 0.4,
+    "DRAW_ANNOTATIONS": false,
+    "EDGE_MARGIN": 40,
+    "EMBEDDING_REFRESH_INTERVAL": 5,
+    "ENABLE_FACE_SWAP": true,
+    "ENABLE_FALLBACK_BLUR": true,
+    "ENABLE_MASK_BLEND": true,
+    "ENABLE_MOUTH_PASTE": true,
+    "ENABLE_OCCLUSION_FALLBACK": true,
+    "ENABLE_POSE_FALLBACK": true,
+    "ENABLE_SWAP_CACHE": true,
+    "FACE_SWAP_BATCH_SIZE": 8,
+    "FULL_DETECT_IMGSZ": 768,
+    "IDENTITY_LOCK_ENABLED": true,
+    "ID_MIN_FACE_SIZE": 80,
+    "INSWAPPER_DET_SIZE": [
+      640,
+      640
+    ],
+    "LOG_EVERY_N_FRAMES": 10,
+    "MATCH_THRESH": 0.55,
+    "MAX_ASPECT_RATIO": 2.2,
+    "MAX_DETECTIONS_PER_FRAME": 60,
+    "MAX_FACE_AGE": 300,
+    "MAX_SWAP_FACES_PER_FRAME": 2,
+    "MIN_FACE_AREA": 500,
+    "MOUTH_BLUR_SIZE": 31,
+    "MOUTH_HEIGHT_RATIO": 0.75,
+    "MOUTH_WIDTH_PAD": 1.3,
+    "NMS_IOU_THRESHOLD": 0.35,
+    "PROXIMITY_THRESH": 0.65,
+    "SIDE_FACE_ASPECT_RATIO_THRESHOLD": 1.75,
+    "SIDE_FACE_CENTER_RATIO_THRESHOLD": 0.38,
+    "SIM_THRESHOLD": 0.38,
+    "SMOOTH_ALPHA": 0.65,
+    "SMOOTH_RESET_CENTER_DISTANCE_RATIO": 0.45,
+    "SMOOTH_RESET_IOU_THRESHOLD": 0.15,
+    "STITCH_BLUR_KERNEL": 21,
+    "SWAP_FEATHER_RATIO": 0.08,
+    "SWAP_HOLD_FRAMES": 5,
+    "SWAP_MASK_BLUR_KERNEL": 21,
+    "SWAP_MAX_ASPECT_RATIO": 2.5,
+    "SWAP_MAX_FACE_AREA_RATIO": 0.08,
+    "SWAP_MIN_CROP_SIZE": 64,
+    "SWAP_MIN_FACE_AREA": 2500,
+    "SWAP_MIN_FACE_SIZE": 110,
+    "TARGET_HOLD_FRAMES": 60,
+    "TARGET_THRESHOLD": 0.5,
+    "TILE_DETECT_IMGSZ": 640,
+    "TILE_DETECT_INTERVAL": 3,
+    "TRACK_BUFFER": 150,
+    "USE_BOTSORT_REID": false
+  },
+  "workers": 1
+}

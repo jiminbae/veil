@@ -1,0 +1,13 @@
+condition,clip_id,status,returncode,elapsed_sec,failure_reason
+full,chokepoint_P2E_S5_C2,completed,0,17.373,
+full,chokepoint_P2L_S5_C2,failed,1,5.075,target_registration_no_valid_embedding
+no_identity_lock,chokepoint_P2E_S5_C2,completed,0,17.793,
+no_identity_lock,chokepoint_P2L_S5_C2,failed,1,5.075,target_registration_no_valid_embedding
+no_blur_fallback,chokepoint_P2E_S5_C2,completed,0,16.849,
+no_blur_fallback,chokepoint_P2L_S5_C2,failed,1,5.124,target_registration_no_valid_embedding
+selective_blur_only,chokepoint_P2E_S5_C2,completed,0,12.287,
+selective_blur_only,chokepoint_P2L_S5_C2,failed,1,5.261,target_registration_no_valid_embedding
+no_mouth_paste,chokepoint_P2E_S5_C2,completed,0,17.501,
+no_mouth_paste,chokepoint_P2L_S5_C2,failed,1,5.125,target_registration_no_valid_embedding
+no_swap_cache,chokepoint_P2E_S5_C2,completed,0,17.649,
+no_swap_cache,chokepoint_P2L_S5_C2,failed,1,5.224,target_registration_no_valid_embedding

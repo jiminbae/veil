@@ -1,0 +1,40 @@
+{
+  "attempted_images": 200,
+  "backend": "facenet",
+  "descriptive_pair_binomial_interval_95": [
+    0.008134728282070302,
+    0.01216138085476391
+  ],
+  "embedding_successes": 200,
+  "empirical_fmr": 0.01,
+  "false_accepts": 99,
+  "frozen_before_test_scoring": true,
+  "genuine_acceptance": 0.99,
+  "genuine_pairs": 100,
+  "impostor_pairs": 9900,
+  "interval_limitation": "Pairs share identities; binomial interval is descriptive, not an independent-pair population guarantee. No low-FMR generalization claim.",
+  "model": {
+    "alignment": "official MTCNN bbox crop, margin 0; no landmark warp",
+    "backend": "facenet",
+    "channel_order": "RGB",
+    "checkpoint_sha256": "281cebca8662831adb987a874bdcb36e73f5b1c6dc5ee5878f305e985625d99b",
+    "checkpoint_source": "https://github.com/timesler/facenet-pytorch/releases/tag/v2.2.9",
+    "code_license": "MIT; training dataset and checkpoint terms are separate",
+    "detector": "facenet-pytorch MTCNN; no VEIL detector or cache",
+    "device": "cuda:0",
+    "embedding_dimension": 512,
+    "facenet_pytorch_source": "https://github.com/timesler/facenet-pytorch",
+    "input_size": [
+      160,
+      160
+    ],
+    "model": "InceptionResnetV1 VGGFace2",
+    "normalization": "(pixel-127.5)/128",
+    "similarity": "cosine; unit normalized embeddings"
+  },
+  "requested_empirical_fmr": 0.01,
+  "selection_sha256": "708e6833bd4e4c96d2a91b5e91d052f9d252bb6a85193befa1f28f298020b1af",
+  "status": "calibrated_on_separate_corpus_empirical_operating_point",
+  "subjects": 100,
+  "threshold": 0.4120336771011353
+}

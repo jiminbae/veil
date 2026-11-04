@@ -1,0 +1,21 @@
+{
+  "alignment": "MTCNN five landmarks; least-squares similarity to official 112x112 template",
+  "architecture_sha256": "b4db4eb0174a385fd29e5f616391b50d443f455990c8b88dcab1f8021af8ba4c",
+  "backend": "adaface",
+  "channel_order": "BGR",
+  "checkpoint_sha256": "234da6ce931f821e0a8e920063dc2091d8122ea46285c159d2f25d3f762fecb3",
+  "checkpoint_source": "https://drive.google.com/file/d/1eUaSHG4pGlIZK7hBkqjyp2fc2epKoBvI/view",
+  "code_license": "MIT; training dataset and checkpoint terms are separate",
+  "detector": "facenet-pytorch MTCNN; no VEIL detector or cache",
+  "device": "cuda:0",
+  "embedding_dimension": 512,
+  "facenet_pytorch_source": "https://github.com/timesler/facenet-pytorch",
+  "input_size": [
+    112,
+    112
+  ],
+  "model": "AdaFace IR50 MS1MV2",
+  "normalization": "(pixel/255-0.5)/0.5",
+  "similarity": "cosine; unit normalized embeddings",
+  "source": "https://github.com/mk-minchul/AdaFace"
+}

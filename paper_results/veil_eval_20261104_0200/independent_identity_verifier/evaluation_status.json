@@ -1,0 +1,19 @@
+{
+  "failed_processing_runs": 0,
+  "failure_policy": "unknown; lower/upper bounds retain all attempted faces",
+  "frame_stride": 5,
+  "human_gt": false,
+  "mean_attack_limitation": "FMR threshold calibrated for single frames, not recalibrated for aggregate embeddings",
+  "non_target_threat_model": "same-frame source-to-output and pooled source/output mean embeddings",
+  "original_baseline": "target registered reference; non-target first successful source frame vs later source frames",
+  "rows": 1008,
+  "runs": 126,
+  "runs_with_completed_output": 126,
+  "status": "actual_two_model_scoring_completed",
+  "threshold_source": "separate LFW corpus empirical 1% FMR operating point",
+  "unscored_processing_failures": [],
+  "verifiers": [
+    "adaface",
+    "facenet"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "alignment": "official MTCNN bbox crop, margin 0; no landmark warp",
+  "backend": "facenet",
+  "channel_order": "RGB",
+  "checkpoint_sha256": "281cebca8662831adb987a874bdcb36e73f5b1c6dc5ee5878f305e985625d99b",
+  "checkpoint_source": "https://github.com/timesler/facenet-pytorch/releases/tag/v2.2.9",
+  "code_license": "MIT; training dataset and checkpoint terms are separate",
+  "detector": "facenet-pytorch MTCNN; no VEIL detector or cache",
+  "device": "cuda:0",
+  "embedding_dimension": 512,
+  "facenet_pytorch_source": "https://github.com/timesler/facenet-pytorch",
+  "input_size": [
+    160,
+    160
+  ],
+  "model": "InceptionResnetV1 VGGFace2",
+  "normalization": "(pixel-127.5)/128",
+  "similarity": "cosine; unit normalized embeddings"
+}

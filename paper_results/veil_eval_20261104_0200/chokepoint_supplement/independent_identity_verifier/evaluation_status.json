@@ -1,0 +1,50 @@
+{
+  "failed_processing_runs": 6,
+  "failure_policy": "unknown; lower/upper bounds retain all attempted faces",
+  "frame_stride": 5,
+  "human_gt": false,
+  "mean_attack_limitation": "FMR threshold calibrated for single frames, not recalibrated for aggregate embeddings",
+  "non_target_threat_model": "same-frame source-to-output and pooled source/output mean embeddings",
+  "original_baseline": "target registered reference; non-target first successful source frame vs later source frames",
+  "rows": 48,
+  "runs": 12,
+  "runs_with_completed_output": 6,
+  "status": "actual_two_model_scoring_completed",
+  "threshold_source": "separate LFW corpus empirical 1% FMR operating point",
+  "unscored_processing_failures": [
+    {
+      "clip_id": "chokepoint_P2L_S5_C2",
+      "condition": "full",
+      "status": "failed"
+    },
+    {
+      "clip_id": "chokepoint_P2L_S5_C2",
+      "condition": "no_identity_lock",
+      "status": "failed"
+    },
+    {
+      "clip_id": "chokepoint_P2L_S5_C2",
+      "condition": "no_blur_fallback",
+      "status": "failed"
+    },
+    {
+      "clip_id": "chokepoint_P2L_S5_C2",
+      "condition": "selective_blur_only",
+      "status": "failed"
+    },
+    {
+      "clip_id": "chokepoint_P2L_S5_C2",
+      "condition": "no_mouth_paste",
+      "status": "failed"
+    },
+    {
+      "clip_id": "chokepoint_P2L_S5_C2",
+      "condition": "no_swap_cache",
+      "status": "failed"
+    }
+  ],
+  "verifiers": [
+    "adaface",
+    "facenet"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "formats": [
+    "PNG",
+    "SVG"
+  ],
+  "generated": [
+    "target_preservation_and_exposure",
+    "swap_blur_usage",
+    "independent_verifier_reidentification",
+    "identity_lock_per_clip",
+    "utility_vs_reidentification",
+    "condition_processing_speed",
+    "failure_type_distribution"
+  ],
+  "omitted": {},
+  "source_files": [
+    "aggregate_metrics.csv",
+    "confidence_intervals.csv",
+    "paired_comparisons.csv",
+    "runtime_metrics.csv",
+    "quality_metrics.csv",
+    "failure_cases.csv"
+  ],
+  "validation": "numerical source checks and rendered visual inspection are recorded separately"
+}

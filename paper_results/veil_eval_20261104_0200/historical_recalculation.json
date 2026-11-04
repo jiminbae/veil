@@ -1,0 +1,35 @@
+{
+  "full": {
+    "blurred": 7067,
+    "clip_macro_system_target_coverage": 0.9157057,
+    "clips": 20,
+    "micro_blur_coverage": 0.7831338652482269,
+    "micro_swap_coverage": 0.21686613475177305,
+    "nontarget_face_rows": 9024,
+    "recomputed_matches_stored_rounded": true,
+    "stored_mean_target_coverage": 0.915706,
+    "swapped": 1957
+  },
+  "no_blur_fallback": {
+    "blurred": 0,
+    "clip_macro_system_target_coverage": 0.9157057,
+    "clips": 20,
+    "micro_blur_coverage": 0.0,
+    "micro_swap_coverage": 0.21686613475177305,
+    "nontarget_face_rows": 9024,
+    "recomputed_matches_stored_rounded": true,
+    "stored_mean_target_coverage": 0.915706,
+    "swapped": 1957
+  },
+  "no_identity_lock": {
+    "blurred": 7397,
+    "clip_macro_system_target_coverage": 0.84934175,
+    "clips": 20,
+    "micro_blur_coverage": 0.7850774782424114,
+    "micro_swap_coverage": 0.21492252175758864,
+    "nontarget_face_rows": 9422,
+    "recomputed_matches_stored_rounded": true,
+    "stored_mean_target_coverage": 0.849342,
+    "swapped": 2025
+  }
+}

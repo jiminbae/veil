@@ -1,0 +1,5 @@
+check,status,detail_count
+raw_state_counts_and_denominators,passed,0
+matched_observation_unique_per_frame,passed,
+model_and_processing_code_consistent,passed,
+real_verifier_raw_score_recomputation,passed,

@@ -1,0 +1,70 @@
+{
+  "alignment_scope": "AdaFace: five-landmark similarity; FaceNet: official detected-box crop",
+  "denominator": "Same sampled eligible face observations as per_clip_verifier_metrics; repeated source counts across conditions are paired, not independent",
+  "reference_scope": "Registered-reference extraction has only a success flag; failed reference detection/alignment stages were not logged",
+  "rows": 144,
+  "sources": [
+    {
+      "file": "scores/adaface/full__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "db819cae4d939c7ac85d5bbc7b068a1fa4c2a8c06c4c8a6cbd9a4d9a8e21bdfa",
+      "source_receipt_sha256": "33c6d38e19ef36524fdff2008fce95edb336d1e309c9188445a111dcf39d03f3"
+    },
+    {
+      "file": "scores/adaface/no_blur_fallback__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "dd66990ae09b190dd495a2597938dae525167f04acdc5f6149757f0ecc26c9c0",
+      "source_receipt_sha256": "33c6d38e19ef36524fdff2008fce95edb336d1e309c9188445a111dcf39d03f3"
+    },
+    {
+      "file": "scores/adaface/no_identity_lock__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "0aed42f7f8e40a341e45c32e9cd90dd7f393f73cdcce2a03da4df4809661b6e1",
+      "source_receipt_sha256": "33c6d38e19ef36524fdff2008fce95edb336d1e309c9188445a111dcf39d03f3"
+    },
+    {
+      "file": "scores/adaface/no_mouth_paste__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "7f8f258c4ce19b20bb81f11269a1210755c18c77168dfc65b97dfc93cea1db42",
+      "source_receipt_sha256": "33c6d38e19ef36524fdff2008fce95edb336d1e309c9188445a111dcf39d03f3"
+    },
+    {
+      "file": "scores/adaface/no_swap_cache__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "c8f6b8c17f3441aa520fa4f936fbac5d6200687d7bbdbcf7adc7d24f7c30cd86",
+      "source_receipt_sha256": "33c6d38e19ef36524fdff2008fce95edb336d1e309c9188445a111dcf39d03f3"
+    },
+    {
+      "file": "scores/adaface/selective_blur_only__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "750a1cc7141b634045ee96dbe8aa9e4e00863b5e6b3599658b3e58bf95fe6ec9",
+      "source_receipt_sha256": "33c6d38e19ef36524fdff2008fce95edb336d1e309c9188445a111dcf39d03f3"
+    },
+    {
+      "file": "scores/facenet/full__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "32f238dc2be1d7f5eb5e0813572883392268668bd6bd21b594ca628977fc65a1",
+      "source_receipt_sha256": "1e97cb703050a67e0299b268c14d30e5786c4b1f0c56930bf4346573ba04c802"
+    },
+    {
+      "file": "scores/facenet/no_blur_fallback__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "a092d8710ecb2bcc160d4145ad266c64c4630b208617581093f962603ffabe94",
+      "source_receipt_sha256": "1e97cb703050a67e0299b268c14d30e5786c4b1f0c56930bf4346573ba04c802"
+    },
+    {
+      "file": "scores/facenet/no_identity_lock__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "f643a0ced7f4fea397b7490addcbaa6bbe837542cdd8b9399dbb9d31b5dec6bf",
+      "source_receipt_sha256": "1e97cb703050a67e0299b268c14d30e5786c4b1f0c56930bf4346573ba04c802"
+    },
+    {
+      "file": "scores/facenet/no_mouth_paste__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "545b3fab06ee8401a2493d77ff9c32d4a059c4e990ae0384a2e1c3b0f69a138b",
+      "source_receipt_sha256": "1e97cb703050a67e0299b268c14d30e5786c4b1f0c56930bf4346573ba04c802"
+    },
+    {
+      "file": "scores/facenet/no_swap_cache__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "d9bb0f98352e3ebb3549cec35d737b72c7143f12083d9ef5a397f70db69d9e9e",
+      "source_receipt_sha256": "1e97cb703050a67e0299b268c14d30e5786c4b1f0c56930bf4346573ba04c802"
+    },
+    {
+      "file": "scores/facenet/selective_blur_only__chokepoint_P2E_S5_C2/scores.json",
+      "sha256": "efaa624c08c14b0636a2d74c1fe8f1bc4a38fde96ed6b5b988b7add093ab716a",
+      "source_receipt_sha256": "1e97cb703050a67e0299b268c14d30e5786c4b1f0c56930bf4346573ba04c802"
+    }
+  ],
+  "status": "receipt_derived_and_embedding_counts_reconciled",
+  "unknown_policy": "Masked source_or_reference failures and unclassified failures have unknown detection/alignment; no point estimate when unknown"
+}

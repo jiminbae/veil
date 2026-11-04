@@ -1,0 +1,70 @@
+{
+  "code_sha256": {
+    "local_research/vendor/adaface_net.py": "b4db4eb0174a385fd29e5f616391b50d443f455990c8b88dcab1f8021af8ba4c",
+    "tools/calibrate_independent_verifiers.py": "4645b19c34ee7a4891b42e6af7abf233caeff899b078fe9d9f7c252c12e72805",
+    "tools/independent_verifiers.py": "286c4bde63e69931b5fcb941b7e8725be976adbea1b7867b024971a14fe0b77d"
+  },
+  "comparisons": [
+    {
+      "backend": "adaface",
+      "comparison": "repeated_cuda",
+      "frozen_cuda_threshold": 0.14601984620094302,
+      "frozen_threshold_empirical_fmr_on_repeat": 0.01,
+      "frozen_threshold_false_accepts_on_repeat": 99,
+      "impostor_pairs": 9900,
+      "repeat_calibration_threshold": 0.14601984620094302,
+      "repeat_device": "cuda:0",
+      "repeat_genuine_acceptance_at_its_calibration_threshold": 1.0,
+      "same_checkpoint": true,
+      "same_selection": true,
+      "threshold_delta": 0.0
+    },
+    {
+      "backend": "adaface",
+      "comparison": "cpu",
+      "frozen_cuda_threshold": 0.14601984620094302,
+      "frozen_threshold_empirical_fmr_on_repeat": 0.009797979797979799,
+      "frozen_threshold_false_accepts_on_repeat": 97,
+      "impostor_pairs": 9900,
+      "repeat_calibration_threshold": 0.145172655582428,
+      "repeat_device": "cpu",
+      "repeat_genuine_acceptance_at_its_calibration_threshold": 1.0,
+      "same_checkpoint": true,
+      "same_selection": true,
+      "threshold_delta": -0.0008471906185150146
+    },
+    {
+      "backend": "facenet",
+      "comparison": "repeated_cuda",
+      "frozen_cuda_threshold": 0.4120336771011353,
+      "frozen_threshold_empirical_fmr_on_repeat": 0.01,
+      "frozen_threshold_false_accepts_on_repeat": 99,
+      "impostor_pairs": 9900,
+      "repeat_calibration_threshold": 0.4120336771011353,
+      "repeat_device": "cuda:0",
+      "repeat_genuine_acceptance_at_its_calibration_threshold": 0.99,
+      "same_checkpoint": true,
+      "same_selection": true,
+      "threshold_delta": 0.0
+    },
+    {
+      "backend": "facenet",
+      "comparison": "cpu",
+      "frozen_cuda_threshold": 0.4120336771011353,
+      "frozen_threshold_empirical_fmr_on_repeat": 0.010303030303030303,
+      "frozen_threshold_false_accepts_on_repeat": 102,
+      "impostor_pairs": 9900,
+      "repeat_calibration_threshold": 0.4148020446300507,
+      "repeat_device": "cpu",
+      "repeat_genuine_acceptance_at_its_calibration_threshold": 0.99,
+      "same_checkpoint": true,
+      "same_selection": true,
+      "threshold_delta": 0.0027683675289154053
+    }
+  ],
+  "finished_utc": "2026-11-04T01:32:03.534950+00:00",
+  "interpretation": "Device sensitivity audit only. Keep the original pre-test CUDA thresholds; CPU and CUDA operating points are not interchangeable. This is not test-video threshold tuning.",
+  "original_thresholds_replaced": false,
+  "same_device_threshold_reproduction_within_1e_6": true,
+  "started_utc": "2026-11-04T01:31:04.750367+00:00"
+}

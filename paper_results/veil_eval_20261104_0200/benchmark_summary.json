@@ -1,0 +1,40 @@
+{
+  "completed_runs": 126,
+  "condition_metrics_csv": "$HOME/veil/local_research/veil_eval_20261104_0200/primary/condition_metrics.csv",
+  "conditions": [
+    "full",
+    "no_identity_lock",
+    "no_blur_fallback",
+    "selective_blur_only",
+    "no_mouth_paste",
+    "no_swap_cache"
+  ],
+  "dry_run": false,
+  "failed_runs": 0,
+  "output_dir": "$HOME/veil/local_research/veil_eval_20261104_0200/primary",
+  "replacement_image": "$HOME/veil/media/fake_face.jpg",
+  "selected_clips": [
+    "170221_haggling_b1_hd_00_27_0001150000",
+    "170221_haggling_b2_hd_00_27_0001350000",
+    "170221_haggling_b2_hd_00_27_0001850000",
+    "170221_haggling_b3_hd_00_27_0001250000",
+    "170221_haggling_b3_hd_00_27_0001350000",
+    "170221_haggling_b3_hd_00_27_0001450000",
+    "170221_haggling_m1_hd_00_08_0001750000",
+    "170221_haggling_m1_hd_00_27_0001750000",
+    "170221_haggling_m2_hd_00_08_0001150000",
+    "170224_haggling_a1_hd_00_27_0002350000",
+    "170224_haggling_a1_hd_00_27_0002950000",
+    "170224_haggling_a2_hd_00_27_0001750000",
+    "170224_haggling_a2_hd_00_27_0002350000",
+    "170224_haggling_b1_hd_00_08_0001350000",
+    "170224_haggling_b1_hd_00_25_0001450000",
+    "170224_haggling_b1_hd_00_25_0001750000",
+    "170224_haggling_b2_hd_00_27_0001750000",
+    "170224_haggling_b3_hd_00_27_0002350000",
+    "170224_haggling_b3_hd_00_27_0002950000",
+    "170228_haggling_a1_hd_00_08_0002350000",
+    "170228_haggling_a1_hd_00_27_0002950000"
+  ],
+  "total_runs": 126
+}

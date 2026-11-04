@@ -1,0 +1,82 @@
+{
+  "all_run_checks_pass": true,
+  "checks": [
+    {
+      "actions_in_range": true,
+      "clean_output": true,
+      "clip_id": "chokepoint_P2E_S5_C2",
+      "complete_frame_ledger": true,
+      "completed_receipt": true,
+      "condition": "full",
+      "matching_denominator_reconciles": true,
+      "target_render_pixels_unchanged": true,
+      "unique_frame_ledger": true
+    },
+    {
+      "actions_in_range": true,
+      "clean_output": true,
+      "clip_id": "chokepoint_P2E_S5_C2",
+      "complete_frame_ledger": true,
+      "completed_receipt": true,
+      "condition": "no_identity_lock",
+      "matching_denominator_reconciles": true,
+      "target_render_pixels_unchanged": true,
+      "unique_frame_ledger": true
+    },
+    {
+      "actions_in_range": true,
+      "clean_output": true,
+      "clip_id": "chokepoint_P2E_S5_C2",
+      "complete_frame_ledger": true,
+      "completed_receipt": true,
+      "condition": "no_blur_fallback",
+      "matching_denominator_reconciles": true,
+      "target_render_pixels_unchanged": true,
+      "unique_frame_ledger": true
+    },
+    {
+      "actions_in_range": true,
+      "clean_output": true,
+      "clip_id": "chokepoint_P2E_S5_C2",
+      "complete_frame_ledger": true,
+      "completed_receipt": true,
+      "condition": "selective_blur_only",
+      "matching_denominator_reconciles": true,
+      "target_render_pixels_unchanged": true,
+      "unique_frame_ledger": true
+    },
+    {
+      "actions_in_range": true,
+      "clean_output": true,
+      "clip_id": "chokepoint_P2E_S5_C2",
+      "complete_frame_ledger": true,
+      "completed_receipt": true,
+      "condition": "no_mouth_paste",
+      "matching_denominator_reconciles": true,
+      "target_render_pixels_unchanged": true,
+      "unique_frame_ledger": true
+    },
+    {
+      "actions_in_range": true,
+      "clean_output": true,
+      "clip_id": "chokepoint_P2E_S5_C2",
+      "complete_frame_ledger": true,
+      "completed_receipt": true,
+      "condition": "no_swap_cache",
+      "matching_denominator_reconciles": true,
+      "target_render_pixels_unchanged": true,
+      "unique_frame_ledger": true
+    }
+  ],
+  "completed_runs": 6,
+  "human_annotation_validation": false,
+  "identity_verifier_validation": "separate scoring stage",
+  "independent_raw_recomputation_passed": true,
+  "input_hashes_rechecked": true,
+  "output_hashes_rechecked": true,
+  "planned_population": 2,
+  "processing_code_hashes_consistent": true,
+  "processing_model_hashes_consistent": true,
+  "raw_recomputation_issues": [],
+  "unique_condition_clip_keys": true
+}

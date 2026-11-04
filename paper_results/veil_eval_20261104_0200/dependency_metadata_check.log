@@ -1,0 +1,4 @@
+onnxruntime-gpu 1.23.2 requires coloredlogs, which is not installed.
+facenet-pytorch 2.6.0 has requirement Pillow<10.3.0,>=10.2.0, but you have pillow 13.0.0.
+facenet-pytorch 2.6.0 has requirement torch<2.3.0,>=2.2.0, but you have torch 2.10.0.
+facenet-pytorch 2.6.0 has requirement torchvision<0.18.0,>=0.17.0, but you have torchvision 0.25.0.

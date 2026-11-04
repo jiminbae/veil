@@ -1,0 +1,12 @@
+{
+  "branch_created_utc": "2026-11-03T17:06:09+00:00",
+  "branch_elapsed_note": "Includes the interrupted/idle interval between user turns; not GPU compute time",
+  "elapsed_from_primary_start_sec": 5445.935676,
+  "elapsed_since_branch_creation_sec": 30878.414765,
+  "note": "Primary driver includes hashing/output validation; subprocess FPS excludes those. Model/data preparation preceded this start. Waiting controller intervals are not double-counted.",
+  "postprocessing_active_stage_sec_sum": 1021.9894118520315,
+  "primary_driver_finished_utc": "2026-11-04T01:05:58.216964+00:00",
+  "primary_driver_wall_sec": 3356.737875,
+  "primary_processing_started_utc": "2026-11-04T00:10:01.479089+00:00",
+  "primary_subprocess_wall_sec_sum": 3176.015
+}

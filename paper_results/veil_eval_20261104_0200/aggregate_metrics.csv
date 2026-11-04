@@ -1,0 +1,643 @@
+condition,metric,clips,sequence_clusters,annotation_level,aggregation,value,numerator,denominator,backend,group
+full,system_target_frame_coverage,21,11,system_log,micro,0.8791104050833995,5534.0,6295.0,,
+full,system_target_frame_coverage,21,11,system_log,clip_macro,0.8790837182141529,,21,,
+full,system_nontarget_swap_fraction,21,11,system_log,micro,0.22706016834666945,2185.0,9623.0,,
+full,system_nontarget_swap_fraction,21,11,system_log,clip_macro,0.27162224600071055,,21,,
+full,system_nontarget_blur_fraction,21,11,system_log,micro,0.7729398316533306,7438.0,9623.0,,
+full,system_nontarget_blur_fraction,21,11,system_log,clip_macro,0.7283777539992894,,21,,
+full,system_nontarget_unprocessed_fraction,21,11,system_log,micro,0.0,0.0,9623.0,,
+full,system_nontarget_unprocessed_fraction,21,11,system_log,clip_macro,0.0,,21,,
+full,derived_target_preserve_rate,21,11,unverified_official_3d_projection,micro,0.9743822674418605,5363.0,5504.0,,
+full,derived_target_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,0.9698438152897216,,21,,
+full,derived_target_altered_rate,21,11,unverified_official_3d_projection,micro,0.013626453488372093,75.0,5504.0,,
+full,derived_target_altered_rate,21,11,unverified_official_3d_projection,clip_macro,0.017989275843932184,,21,,
+full,derived_target_missed_rate,21,11,unverified_official_3d_projection,micro,0.011991279069767442,66.0,5504.0,,
+full,derived_target_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.012166908866346315,,21,,
+full,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,micro,0.04636098056649308,365.0,7873.0,,
+full,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,clip_macro,0.038280495924310286,,21,,
+full,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,micro,0.00012701638511367967,1.0,7873.0,,
+full,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,7.910140800506249e-05,,21,,
+full,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,micro,0.0462339641813794,364.0,7873.0,,
+full,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.03820139451630523,,21,,
+full,system_swap_fraction,21,11,system_log,micro,0.1441578148710167,2185.0,15157.0,,
+full,system_swap_fraction,21,11,system_log,clip_macro,0.15409409353888287,,21,,
+full,system_blur_fraction,21,11,system_log,micro,0.4907303556112687,7438.0,15157.0,,
+full,system_blur_fraction,21,11,system_log,clip_macro,0.4750381915883142,,21,,
+full,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,micro,0.2342182141496253,1844.0,7873.0,,
+full,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,clip_macro,0.2956745670979132,,21,,
+full,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,micro,0.7194208052838816,5664.0,7873.0,,
+full,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,clip_macro,0.6660449369777764,,21,,
+full,swap_blur_switch_rate,21,11,system_log,micro,0.008276797829036635,61.0,7370.0,,
+full,swap_blur_switch_rate,21,11,system_log,clip_macro,0.010131312516906304,,21,,
+full,end_to_end_fps,21,,,pooled_frames_over_wall_time,10.916405823239199,6295.0,576.655,,
+no_identity_lock,system_target_frame_coverage,21,11,system_log,micro,0.8158856235107228,5136.0,6295.0,,
+no_identity_lock,system_target_frame_coverage,21,11,system_log,clip_macro,0.8158793863141691,,21,,
+no_identity_lock,system_nontarget_swap_fraction,21,11,system_log,micro,0.22333100488973157,2238.0,10021.0,,
+no_identity_lock,system_nontarget_swap_fraction,21,11,system_log,clip_macro,0.2656063942087356,,21,,
+no_identity_lock,system_nontarget_blur_fraction,21,11,system_log,micro,0.7766689951102684,7783.0,10021.0,,
+no_identity_lock,system_nontarget_blur_fraction,21,11,system_log,clip_macro,0.7343936057912644,,21,,
+no_identity_lock,system_nontarget_unprocessed_fraction,21,11,system_log,micro,0.0,0.0,10021.0,,
+no_identity_lock,system_nontarget_unprocessed_fraction,21,11,system_log,clip_macro,0.0,,21,,
+no_identity_lock,derived_target_preserve_rate,21,11,unverified_official_3d_projection,micro,0.9115188953488372,5017.0,5504.0,,
+no_identity_lock,derived_target_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,0.8564194240888705,,21,,
+no_identity_lock,derived_target_altered_rate,21,11,unverified_official_3d_projection,micro,0.07648982558139535,421.0,5504.0,,
+no_identity_lock,derived_target_altered_rate,21,11,unverified_official_3d_projection,clip_macro,0.1314136670447834,,21,,
+no_identity_lock,derived_target_missed_rate,21,11,unverified_official_3d_projection,micro,0.011991279069767442,66.0,5504.0,,
+no_identity_lock,derived_target_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.012166908866346315,,21,,
+no_identity_lock,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,micro,0.0462339641813794,364.0,7873.0,,
+no_identity_lock,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,clip_macro,0.03820139451630523,,21,,
+no_identity_lock,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,micro,0.0,0.0,7873.0,,
+no_identity_lock,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,0.0,,21,,
+no_identity_lock,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,micro,0.0462339641813794,364.0,7873.0,,
+no_identity_lock,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.03820139451630523,,21,,
+no_identity_lock,system_swap_fraction,21,11,system_log,micro,0.14765454905324274,2238.0,15157.0,,
+no_identity_lock,system_swap_fraction,21,11,system_log,clip_macro,0.15696232820640954,,21,,
+no_identity_lock,system_blur_fraction,21,11,system_log,micro,0.5134921158540608,7783.0,15157.0,,
+no_identity_lock,system_blur_fraction,21,11,system_log,clip_macro,0.5065055653153748,,21,,
+no_identity_lock,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,micro,0.2342182141496253,1844.0,7873.0,,
+no_identity_lock,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,clip_macro,0.2956745670979132,,21,,
+no_identity_lock,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,micro,0.7195478216689953,5665.0,7873.0,,
+no_identity_lock,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,clip_macro,0.6661240383857815,,21,,
+no_identity_lock,swap_blur_switch_rate,21,11,system_log,micro,0.008276797829036635,61.0,7370.0,,
+no_identity_lock,swap_blur_switch_rate,21,11,system_log,clip_macro,0.010131312516906304,,21,,
+no_identity_lock,end_to_end_fps,21,,,pooled_frames_over_wall_time,10.826009940323662,6295.0,581.47,,
+no_blur_fallback,system_target_frame_coverage,21,11,system_log,micro,0.8791104050833995,5534.0,6295.0,,
+no_blur_fallback,system_target_frame_coverage,21,11,system_log,clip_macro,0.8790837182141529,,21,,
+no_blur_fallback,system_nontarget_swap_fraction,21,11,system_log,micro,0.22706016834666945,2185.0,9623.0,,
+no_blur_fallback,system_nontarget_swap_fraction,21,11,system_log,clip_macro,0.27162224600071055,,21,,
+no_blur_fallback,system_nontarget_blur_fraction,21,11,system_log,micro,0.0,0.0,9623.0,,
+no_blur_fallback,system_nontarget_blur_fraction,21,11,system_log,clip_macro,0.0,,21,,
+no_blur_fallback,system_nontarget_unprocessed_fraction,21,11,system_log,micro,0.7729398316533306,7438.0,9623.0,,
+no_blur_fallback,system_nontarget_unprocessed_fraction,21,11,system_log,clip_macro,0.7283777539992894,,21,,
+no_blur_fallback,derived_target_preserve_rate,21,11,unverified_official_3d_projection,micro,0.9743822674418605,5363.0,5504.0,,
+no_blur_fallback,derived_target_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,0.9698438152897216,,21,,
+no_blur_fallback,derived_target_altered_rate,21,11,unverified_official_3d_projection,micro,0.0023619186046511626,13.0,5504.0,,
+no_blur_fallback,derived_target_altered_rate,21,11,unverified_official_3d_projection,clip_macro,0.00359622574327933,,21,,
+no_blur_fallback,derived_target_missed_rate,21,11,unverified_official_3d_projection,micro,0.011991279069767442,66.0,5504.0,,
+no_blur_fallback,derived_target_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.012166908866346315,,21,,
+no_blur_fallback,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,micro,0.7657817858503747,6029.0,7873.0,,
+no_blur_fallback,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,clip_macro,0.7043254329020867,,21,,
+no_blur_fallback,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,micro,0.00012701638511367967,1.0,7873.0,,
+no_blur_fallback,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,7.910140800506249e-05,,21,,
+no_blur_fallback,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,micro,0.0462339641813794,364.0,7873.0,,
+no_blur_fallback,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.03820139451630523,,21,,
+no_blur_fallback,system_swap_fraction,21,11,system_log,micro,0.1441578148710167,2185.0,15157.0,,
+no_blur_fallback,system_swap_fraction,21,11,system_log,clip_macro,0.15409409353888287,,21,,
+no_blur_fallback,system_blur_fraction,21,11,system_log,micro,0.0,0.0,15157.0,,
+no_blur_fallback,system_blur_fraction,21,11,system_log,clip_macro,0.0,,21,,
+no_blur_fallback,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,micro,0.2342182141496253,1844.0,7873.0,,
+no_blur_fallback,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,clip_macro,0.2956745670979132,,21,,
+no_blur_fallback,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,micro,0.0,0.0,7873.0,,
+no_blur_fallback,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,clip_macro,0.0,,21,,
+no_blur_fallback,swap_blur_switch_rate,21,11,system_log,micro,0.0,0.0,1760.0,,
+no_blur_fallback,swap_blur_switch_rate,21,11,system_log,clip_macro,0.0,,14,,
+no_blur_fallback,end_to_end_fps,21,,,pooled_frames_over_wall_time,11.043724024441806,6295.0,570.007,,
+selective_blur_only,system_target_frame_coverage,21,11,system_log,micro,0.8791104050833995,5534.0,6295.0,,
+selective_blur_only,system_target_frame_coverage,21,11,system_log,clip_macro,0.8790837182141529,,21,,
+selective_blur_only,system_nontarget_swap_fraction,21,11,system_log,micro,0.0,0.0,9623.0,,
+selective_blur_only,system_nontarget_swap_fraction,21,11,system_log,clip_macro,0.0,,21,,
+selective_blur_only,system_nontarget_blur_fraction,21,11,system_log,micro,1.0,9623.0,9623.0,,
+selective_blur_only,system_nontarget_blur_fraction,21,11,system_log,clip_macro,1.0,,21,,
+selective_blur_only,system_nontarget_unprocessed_fraction,21,11,system_log,micro,0.0,0.0,9623.0,,
+selective_blur_only,system_nontarget_unprocessed_fraction,21,11,system_log,clip_macro,0.0,,21,,
+selective_blur_only,derived_target_preserve_rate,21,11,unverified_official_3d_projection,micro,0.9743822674418605,5363.0,5504.0,,
+selective_blur_only,derived_target_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,0.9698438152897216,,21,,
+selective_blur_only,derived_target_altered_rate,21,11,unverified_official_3d_projection,micro,0.013626453488372093,75.0,5504.0,,
+selective_blur_only,derived_target_altered_rate,21,11,unverified_official_3d_projection,clip_macro,0.017989275843932184,,21,,
+selective_blur_only,derived_target_missed_rate,21,11,unverified_official_3d_projection,micro,0.011991279069767442,66.0,5504.0,,
+selective_blur_only,derived_target_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.012166908866346315,,21,,
+selective_blur_only,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,micro,0.04636098056649308,365.0,7873.0,,
+selective_blur_only,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,clip_macro,0.038280495924310286,,21,,
+selective_blur_only,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,micro,0.00012701638511367967,1.0,7873.0,,
+selective_blur_only,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,7.910140800506249e-05,,21,,
+selective_blur_only,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,micro,0.0462339641813794,364.0,7873.0,,
+selective_blur_only,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.03820139451630523,,21,,
+selective_blur_only,system_swap_fraction,21,11,system_log,micro,0.0,0.0,15157.0,,
+selective_blur_only,system_swap_fraction,21,11,system_log,clip_macro,0.0,,21,,
+selective_blur_only,system_blur_fraction,21,11,system_log,micro,0.6348881704822854,9623.0,15157.0,,
+selective_blur_only,system_blur_fraction,21,11,system_log,clip_macro,0.629132285127197,,21,,
+selective_blur_only,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,micro,0.0,0.0,7873.0,,
+selective_blur_only,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,clip_macro,0.0,,21,,
+selective_blur_only,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,micro,0.9536390194335069,7508.0,7873.0,,
+selective_blur_only,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,clip_macro,0.9617195040756896,,21,,
+selective_blur_only,swap_blur_switch_rate,21,11,system_log,micro,0.0,0.0,7370.0,,
+selective_blur_only,swap_blur_switch_rate,21,11,system_log,clip_macro,0.0,,21,,
+selective_blur_only,end_to_end_fps,21,,,pooled_frames_over_wall_time,19.684854701068517,6295.0,319.789,,
+no_mouth_paste,system_target_frame_coverage,21,11,system_log,micro,0.8791104050833995,5534.0,6295.0,,
+no_mouth_paste,system_target_frame_coverage,21,11,system_log,clip_macro,0.8790837182141529,,21,,
+no_mouth_paste,system_nontarget_swap_fraction,21,11,system_log,micro,0.22706016834666945,2185.0,9623.0,,
+no_mouth_paste,system_nontarget_swap_fraction,21,11,system_log,clip_macro,0.27162224600071055,,21,,
+no_mouth_paste,system_nontarget_blur_fraction,21,11,system_log,micro,0.7729398316533306,7438.0,9623.0,,
+no_mouth_paste,system_nontarget_blur_fraction,21,11,system_log,clip_macro,0.7283777539992894,,21,,
+no_mouth_paste,system_nontarget_unprocessed_fraction,21,11,system_log,micro,0.0,0.0,9623.0,,
+no_mouth_paste,system_nontarget_unprocessed_fraction,21,11,system_log,clip_macro,0.0,,21,,
+no_mouth_paste,derived_target_preserve_rate,21,11,unverified_official_3d_projection,micro,0.9743822674418605,5363.0,5504.0,,
+no_mouth_paste,derived_target_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,0.9698438152897216,,21,,
+no_mouth_paste,derived_target_altered_rate,21,11,unverified_official_3d_projection,micro,0.013626453488372093,75.0,5504.0,,
+no_mouth_paste,derived_target_altered_rate,21,11,unverified_official_3d_projection,clip_macro,0.017989275843932184,,21,,
+no_mouth_paste,derived_target_missed_rate,21,11,unverified_official_3d_projection,micro,0.011991279069767442,66.0,5504.0,,
+no_mouth_paste,derived_target_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.012166908866346315,,21,,
+no_mouth_paste,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,micro,0.04636098056649308,365.0,7873.0,,
+no_mouth_paste,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,clip_macro,0.038280495924310286,,21,,
+no_mouth_paste,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,micro,0.00012701638511367967,1.0,7873.0,,
+no_mouth_paste,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,7.910140800506249e-05,,21,,
+no_mouth_paste,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,micro,0.0462339641813794,364.0,7873.0,,
+no_mouth_paste,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.03820139451630523,,21,,
+no_mouth_paste,system_swap_fraction,21,11,system_log,micro,0.1441578148710167,2185.0,15157.0,,
+no_mouth_paste,system_swap_fraction,21,11,system_log,clip_macro,0.15409409353888287,,21,,
+no_mouth_paste,system_blur_fraction,21,11,system_log,micro,0.4907303556112687,7438.0,15157.0,,
+no_mouth_paste,system_blur_fraction,21,11,system_log,clip_macro,0.4750381915883142,,21,,
+no_mouth_paste,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,micro,0.2342182141496253,1844.0,7873.0,,
+no_mouth_paste,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,clip_macro,0.2956745670979132,,21,,
+no_mouth_paste,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,micro,0.7194208052838816,5664.0,7873.0,,
+no_mouth_paste,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,clip_macro,0.6660449369777764,,21,,
+no_mouth_paste,swap_blur_switch_rate,21,11,system_log,micro,0.008276797829036635,61.0,7370.0,,
+no_mouth_paste,swap_blur_switch_rate,21,11,system_log,clip_macro,0.010131312516906304,,21,,
+no_mouth_paste,end_to_end_fps,21,,,pooled_frames_over_wall_time,11.166277310372843,6295.0,563.751,,
+no_swap_cache,system_target_frame_coverage,21,11,system_log,micro,0.8791104050833995,5534.0,6295.0,,
+no_swap_cache,system_target_frame_coverage,21,11,system_log,clip_macro,0.8790837182141529,,21,,
+no_swap_cache,system_nontarget_swap_fraction,21,11,system_log,micro,0.18227164086043854,1754.0,9623.0,,
+no_swap_cache,system_nontarget_swap_fraction,21,11,system_log,clip_macro,0.22374528442996966,,21,,
+no_swap_cache,system_nontarget_blur_fraction,21,11,system_log,micro,0.8177283591395614,7869.0,9623.0,,
+no_swap_cache,system_nontarget_blur_fraction,21,11,system_log,clip_macro,0.7762547155700302,,21,,
+no_swap_cache,system_nontarget_unprocessed_fraction,21,11,system_log,micro,0.0,0.0,9623.0,,
+no_swap_cache,system_nontarget_unprocessed_fraction,21,11,system_log,clip_macro,0.0,,21,,
+no_swap_cache,derived_target_preserve_rate,21,11,unverified_official_3d_projection,micro,0.9743822674418605,5363.0,5504.0,,
+no_swap_cache,derived_target_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,0.9698438152897216,,21,,
+no_swap_cache,derived_target_altered_rate,21,11,unverified_official_3d_projection,micro,0.013626453488372093,75.0,5504.0,,
+no_swap_cache,derived_target_altered_rate,21,11,unverified_official_3d_projection,clip_macro,0.017989275843932184,,21,,
+no_swap_cache,derived_target_missed_rate,21,11,unverified_official_3d_projection,micro,0.011991279069767442,66.0,5504.0,,
+no_swap_cache,derived_target_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.012166908866346315,,21,,
+no_swap_cache,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,micro,0.04636098056649308,365.0,7873.0,,
+no_swap_cache,derived_nontarget_exposure_rate,21,11,unverified_official_3d_projection,clip_macro,0.038280495924310286,,21,,
+no_swap_cache,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,micro,0.00012701638511367967,1.0,7873.0,,
+no_swap_cache,derived_nontarget_false_preserve_rate,21,11,unverified_official_3d_projection,clip_macro,7.910140800506249e-05,,21,,
+no_swap_cache,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,micro,0.0462339641813794,364.0,7873.0,,
+no_swap_cache,derived_nontarget_missed_rate,21,11,unverified_official_3d_projection,clip_macro,0.03820139451630523,,21,,
+no_swap_cache,system_swap_fraction,21,11,system_log,micro,0.115722108596688,1754.0,15157.0,,
+no_swap_cache,system_swap_fraction,21,11,system_log,clip_macro,0.12566774351538387,,21,,
+no_swap_cache,system_blur_fraction,21,11,system_log,micro,0.5191660618855974,7869.0,15157.0,,
+no_swap_cache,system_blur_fraction,21,11,system_log,clip_macro,0.5034645416118131,,21,,
+no_swap_cache,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,micro,0.1942080528388162,1529.0,7873.0,,
+no_swap_cache,derived_nontarget_swap_fraction,21,11,unverified_official_3d_projection,clip_macro,0.2480461087119376,,21,,
+no_swap_cache,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,micro,0.7594309665946907,5979.0,7873.0,,
+no_swap_cache,derived_nontarget_blur_fraction,21,11,unverified_official_3d_projection,clip_macro,0.7136733953637521,,21,,
+no_swap_cache,swap_blur_switch_rate,21,11,system_log,micro,0.04491180461329715,331.0,7370.0,,
+no_swap_cache,swap_blur_switch_rate,21,11,system_log,clip_macro,0.05285543501890227,,21,,
+no_swap_cache,end_to_end_fps,21,,,pooled_frames_over_wall_time,11.154563802510177,6295.0,564.343,,
+full,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.9729468599033816,1007.0,1035.0,adaface,target
+full,accept_rate_successful_pairs,21,,,clip_macro,0.9644076641750203,,20,adaface,target
+full,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.916287534121929,1007.0,1099.0,adaface,target
+full,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9799809342230696,1028.0,1049.0,adaface,target
+full,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,adaface,target
+full,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9481346678798908,1042.0,1099.0,adaface,target
+full,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.983218163869694,996.0,1013.0,adaface,target
+full,accept_rate_upper_bound_all_attempts,21,,,micro,0.9745222929936306,1071.0,1099.0,adaface,target
+full,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.39226519337016574,426.0,1086.0,adaface,non_target
+full,accept_rate_successful_pairs,21,,,clip_macro,0.41319734863342117,,21,adaface,non_target
+full,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.26910928616550855,426.0,1583.0,adaface,non_target
+full,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9120654396728016,1338.0,1467.0,adaface,non_target
+full,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,adaface,non_target
+full,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6967782691092862,1103.0,1583.0,adaface,non_target
+full,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.4147557328015952,416.0,1003.0,adaface,non_target
+full,accept_rate_upper_bound_all_attempts,21,,,micro,0.5830701200252685,923.0,1583.0,adaface,non_target
+full,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.2913165266106443,104.0,357.0,adaface,non_target_swap
+full,accept_rate_successful_pairs,21,,,clip_macro,0.22108225108225107,,14,adaface,non_target_swap
+full,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.2803234501347709,104.0,371.0,adaface,non_target_swap
+full,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9801136363636364,345.0,352.0,adaface,non_target_swap
+full,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9649595687331537,358.0,371.0,adaface,non_target_swap
+full,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9946091644204852,369.0,371.0,adaface,non_target_swap
+full,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.2956521739130435,102.0,345.0,adaface,non_target_swap
+full,accept_rate_upper_bound_all_attempts,21,,,micro,0.31805929919137466,118.0,371.0,adaface,non_target_swap
+full,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.43949930458970793,316.0,719.0,adaface,non_target_blur
+full,accept_rate_successful_pairs,21,,,clip_macro,0.5415015032127243,,18,adaface,non_target_blur
+full,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.2791519434628975,316.0,1132.0,adaface,non_target_blur
+full,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.8908256880733945,971.0,1090.0,adaface,non_target_blur
+full,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9832155477031802,1113.0,1132.0,adaface,non_target_blur
+full,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6369257950530035,721.0,1132.0,adaface,non_target_blur
+full,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.47465437788018433,309.0,651.0,adaface,non_target_blur
+full,accept_rate_upper_bound_all_attempts,21,,,micro,0.6439929328621908,729.0,1132.0,adaface,non_target_blur
+full,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.9710144927536232,1005.0,1035.0,facenet,target
+full,accept_rate_successful_pairs,21,,,clip_macro,0.9609484296111347,,20,facenet,target
+full,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.9144676979071884,1005.0,1099.0,facenet,target
+full,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9742612011439467,1022.0,1049.0,facenet,target
+full,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,facenet,target
+full,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9481346678798908,1042.0,1099.0,facenet,target
+full,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9890981169474727,998.0,1009.0,facenet,target
+full,accept_rate_upper_bound_all_attempts,21,,,micro,0.9727024567788899,1069.0,1099.0,facenet,target
+full,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.09116022099447514,99.0,1086.0,facenet,non_target
+full,accept_rate_successful_pairs,21,,,clip_macro,0.11592177679614941,,21,facenet,non_target
+full,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.06253948199620973,99.0,1583.0,facenet,non_target
+full,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9011588275391956,1322.0,1467.0,facenet,non_target
+full,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,facenet,non_target
+full,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6967782691092862,1103.0,1583.0,facenet,non_target
+full,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.09644670050761421,95.0,985.0,facenet,non_target
+full,accept_rate_upper_bound_all_attempts,21,,,micro,0.37650031585596966,596.0,1583.0,facenet,non_target
+full,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.06722689075630252,24.0,357.0,facenet,non_target_swap
+full,accept_rate_successful_pairs,21,,,clip_macro,0.047402597402597405,,14,facenet,non_target_swap
+full,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.0646900269541779,24.0,371.0,facenet,non_target_swap
+full,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9346590909090909,329.0,352.0,facenet,non_target_swap
+full,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9649595687331537,358.0,371.0,facenet,non_target_swap
+full,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9946091644204852,369.0,371.0,facenet,non_target_swap
+full,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.0729483282674772,24.0,329.0,facenet,non_target_swap
+full,accept_rate_upper_bound_all_attempts,21,,,micro,0.10242587601078167,38.0,371.0,facenet,non_target_swap
+full,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.09874826147426982,71.0,719.0,facenet,non_target_blur
+full,accept_rate_successful_pairs,21,,,clip_macro,0.04586935006355598,,18,facenet,non_target_blur
+full,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.0627208480565371,71.0,1132.0,facenet,non_target_blur
+full,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.8926605504587156,973.0,1090.0,facenet,non_target_blur
+full,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9832155477031802,1113.0,1132.0,facenet,non_target_blur
+full,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6369257950530035,721.0,1132.0,facenet,non_target_blur
+full,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.10477657935285054,68.0,649.0,facenet,non_target_blur
+full,accept_rate_upper_bound_all_attempts,21,,,micro,0.4275618374558304,484.0,1132.0,facenet,non_target_blur
+no_identity_lock,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.9566929133858267,972.0,1016.0,adaface,target
+no_identity_lock,accept_rate_successful_pairs,21,,,clip_macro,0.9298873799207543,,20,adaface,target
+no_identity_lock,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.8844404003639672,972.0,1099.0,adaface,target
+no_identity_lock,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9799809342230696,1028.0,1049.0,adaface,target
+no_identity_lock,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,adaface,target
+no_identity_lock,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9281164695177434,1020.0,1099.0,adaface,target
+no_identity_lock,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.963963963963964,963.0,999.0,adaface,target
+no_identity_lock,accept_rate_upper_bound_all_attempts,21,,,micro,0.9599636032757052,1055.0,1099.0,adaface,target
+no_identity_lock,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.39114391143911437,424.0,1084.0,adaface,non_target
+no_identity_lock,accept_rate_successful_pairs,21,,,clip_macro,0.41249691704395647,,21,adaface,non_target
+no_identity_lock,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.26784586228679724,424.0,1583.0,adaface,non_target
+no_identity_lock,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9120654396728016,1338.0,1467.0,adaface,non_target
+no_identity_lock,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,adaface,non_target
+no_identity_lock,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6955148452305748,1101.0,1583.0,adaface,non_target
+no_identity_lock,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.41417165668662675,415.0,1002.0,adaface,non_target
+no_identity_lock,accept_rate_upper_bound_all_attempts,21,,,micro,0.5830701200252685,923.0,1583.0,adaface,non_target
+no_identity_lock,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.2913165266106443,104.0,357.0,adaface,non_target_swap
+no_identity_lock,accept_rate_successful_pairs,21,,,clip_macro,0.22108225108225107,,14,adaface,non_target_swap
+no_identity_lock,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.2803234501347709,104.0,371.0,adaface,non_target_swap
+no_identity_lock,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9801136363636364,345.0,352.0,adaface,non_target_swap
+no_identity_lock,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9649595687331537,358.0,371.0,adaface,non_target_swap
+no_identity_lock,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9946091644204852,369.0,371.0,adaface,non_target_swap
+no_identity_lock,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.2956521739130435,102.0,345.0,adaface,non_target_swap
+no_identity_lock,accept_rate_upper_bound_all_attempts,21,,,micro,0.31805929919137466,118.0,371.0,adaface,non_target_swap
+no_identity_lock,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.43949930458970793,316.0,719.0,adaface,non_target_blur
+no_identity_lock,accept_rate_successful_pairs,21,,,clip_macro,0.5415015032127243,,18,adaface,non_target_blur
+no_identity_lock,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.27890556045895853,316.0,1133.0,adaface,non_target_blur
+no_identity_lock,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.8908256880733945,971.0,1090.0,adaface,non_target_blur
+no_identity_lock,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9832303618711385,1114.0,1133.0,adaface,non_target_blur
+no_identity_lock,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6363636363636364,721.0,1133.0,adaface,non_target_blur
+no_identity_lock,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.47465437788018433,309.0,651.0,adaface,non_target_blur
+no_identity_lock,accept_rate_upper_bound_all_attempts,21,,,micro,0.6443071491615181,730.0,1133.0,adaface,non_target_blur
+no_identity_lock,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.9517716535433071,967.0,1016.0,facenet,target
+no_identity_lock,accept_rate_successful_pairs,21,,,clip_macro,0.9218797770585004,,20,facenet,target
+no_identity_lock,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.8798908098271155,967.0,1099.0,facenet,target
+no_identity_lock,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9742612011439467,1022.0,1049.0,facenet,target
+no_identity_lock,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,facenet,target
+no_identity_lock,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9281164695177434,1020.0,1099.0,facenet,target
+no_identity_lock,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9647887323943662,959.0,994.0,facenet,target
+no_identity_lock,accept_rate_upper_bound_all_attempts,21,,,micro,0.9554140127388535,1050.0,1099.0,facenet,target
+no_identity_lock,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.08948339483394833,97.0,1084.0,facenet,non_target
+no_identity_lock,accept_rate_successful_pairs,21,,,clip_macro,0.11456211547542385,,21,facenet,non_target
+no_identity_lock,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.06127605811749842,97.0,1583.0,facenet,non_target
+no_identity_lock,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9011588275391956,1322.0,1467.0,facenet,non_target
+no_identity_lock,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,facenet,non_target
+no_identity_lock,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6955148452305748,1101.0,1583.0,facenet,non_target
+no_identity_lock,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.09552845528455285,94.0,984.0,facenet,non_target
+no_identity_lock,accept_rate_upper_bound_all_attempts,21,,,micro,0.37650031585596966,596.0,1583.0,facenet,non_target
+no_identity_lock,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.06722689075630252,24.0,357.0,facenet,non_target_swap
+no_identity_lock,accept_rate_successful_pairs,21,,,clip_macro,0.047402597402597405,,14,facenet,non_target_swap
+no_identity_lock,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.0646900269541779,24.0,371.0,facenet,non_target_swap
+no_identity_lock,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9346590909090909,329.0,352.0,facenet,non_target_swap
+no_identity_lock,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9649595687331537,358.0,371.0,facenet,non_target_swap
+no_identity_lock,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9946091644204852,369.0,371.0,facenet,non_target_swap
+no_identity_lock,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.0729483282674772,24.0,329.0,facenet,non_target_swap
+no_identity_lock,accept_rate_upper_bound_all_attempts,21,,,micro,0.10242587601078167,38.0,371.0,facenet,non_target_swap
+no_identity_lock,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.09874826147426982,71.0,719.0,facenet,non_target_blur
+no_identity_lock,accept_rate_successful_pairs,21,,,clip_macro,0.04586935006355598,,18,facenet,non_target_blur
+no_identity_lock,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.06266548984995587,71.0,1133.0,facenet,non_target_blur
+no_identity_lock,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.8926605504587156,973.0,1090.0,facenet,non_target_blur
+no_identity_lock,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9832303618711385,1114.0,1133.0,facenet,non_target_blur
+no_identity_lock,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6363636363636364,721.0,1133.0,facenet,non_target_blur
+no_identity_lock,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.10477657935285054,68.0,649.0,facenet,non_target_blur
+no_identity_lock,accept_rate_upper_bound_all_attempts,21,,,micro,0.42806707855251547,485.0,1133.0,facenet,non_target_blur
+no_blur_fallback,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.974088291746641,1015.0,1042.0,adaface,target
+no_blur_fallback,accept_rate_successful_pairs,21,,,clip_macro,0.9672620367080509,,20,adaface,target
+no_blur_fallback,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.9235668789808917,1015.0,1099.0,adaface,target
+no_blur_fallback,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9799809342230696,1028.0,1049.0,adaface,target
+no_blur_fallback,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,adaface,target
+no_blur_fallback,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9545040946314831,1049.0,1099.0,adaface,target
+no_blur_fallback,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9842983316977428,1003.0,1019.0,adaface,target
+no_blur_fallback,accept_rate_upper_bound_all_attempts,21,,,micro,0.9754322111010009,1072.0,1099.0,adaface,target
+no_blur_fallback,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.8254716981132075,1225.0,1484.0,adaface,non_target
+no_blur_fallback,accept_rate_successful_pairs,21,,,clip_macro,0.7855647501201429,,21,adaface,non_target
+no_blur_fallback,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.7738471257106759,1225.0,1583.0,adaface,non_target
+no_blur_fallback,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9120654396728016,1338.0,1467.0,adaface,non_target
+no_blur_fallback,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,adaface,non_target
+no_blur_fallback,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9513581806696146,1506.0,1583.0,adaface,non_target
+no_blur_fallback,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.8147590361445783,1082.0,1328.0,adaface,non_target
+no_blur_fallback,accept_rate_upper_bound_all_attempts,21,,,micro,0.8363866077068857,1324.0,1583.0,adaface,non_target
+no_blur_fallback,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.29411764705882354,105.0,357.0,adaface,non_target_swap
+no_blur_fallback,accept_rate_successful_pairs,21,,,clip_macro,0.23136363636363638,,14,adaface,non_target_swap
+no_blur_fallback,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.2830188679245283,105.0,371.0,adaface,non_target_swap
+no_blur_fallback,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9801136363636364,345.0,352.0,adaface,non_target_swap
+no_blur_fallback,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9649595687331537,358.0,371.0,adaface,non_target_swap
+no_blur_fallback,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9946091644204852,369.0,371.0,adaface,non_target_swap
+no_blur_fallback,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.2985507246376812,103.0,345.0,adaface,non_target_swap
+no_blur_fallback,accept_rate_upper_bound_all_attempts,21,,,micro,0.32075471698113206,119.0,371.0,adaface,non_target_swap
+no_blur_fallback,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_blur
+no_blur_fallback,accept_rate_successful_pairs,21,,,clip_macro,,,0,adaface,non_target_blur
+no_blur_fallback,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_blur
+no_blur_fallback,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_blur
+no_blur_fallback,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_blur
+no_blur_fallback,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_blur
+no_blur_fallback,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_blur
+no_blur_fallback,accept_rate_upper_bound_all_attempts,21,,,micro,,0.0,0.0,adaface,non_target_blur
+no_blur_fallback,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.9702495201535508,1011.0,1042.0,facenet,target
+no_blur_fallback,accept_rate_successful_pairs,21,,,clip_macro,0.9613506490341175,,20,facenet,target
+no_blur_fallback,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.9199272065514104,1011.0,1099.0,facenet,target
+no_blur_fallback,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9742612011439467,1022.0,1049.0,facenet,target
+no_blur_fallback,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,facenet,target
+no_blur_fallback,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9545040946314831,1049.0,1099.0,facenet,target
+no_blur_fallback,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9881656804733728,1002.0,1014.0,facenet,target
+no_blur_fallback,accept_rate_upper_bound_all_attempts,21,,,micro,0.9717925386715196,1068.0,1099.0,facenet,target
+no_blur_fallback,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.7702156334231806,1143.0,1484.0,facenet,non_target
+no_blur_fallback,accept_rate_successful_pairs,21,,,clip_macro,0.7181076353942318,,21,facenet,non_target
+no_blur_fallback,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.7220467466835123,1143.0,1583.0,facenet,non_target
+no_blur_fallback,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9011588275391956,1322.0,1467.0,facenet,non_target
+no_blur_fallback,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,facenet,non_target
+no_blur_fallback,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9513581806696146,1506.0,1583.0,facenet,non_target
+no_blur_fallback,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.7661843107387661,1006.0,1313.0,facenet,non_target
+no_blur_fallback,accept_rate_upper_bound_all_attempts,21,,,micro,0.784586228679722,1242.0,1583.0,facenet,non_target
+no_blur_fallback,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.0700280112044818,25.0,357.0,facenet,non_target_swap
+no_blur_fallback,accept_rate_successful_pairs,21,,,clip_macro,0.05025974025974026,,14,facenet,non_target_swap
+no_blur_fallback,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.0673854447439353,25.0,371.0,facenet,non_target_swap
+no_blur_fallback,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9346590909090909,329.0,352.0,facenet,non_target_swap
+no_blur_fallback,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9649595687331537,358.0,371.0,facenet,non_target_swap
+no_blur_fallback,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9946091644204852,369.0,371.0,facenet,non_target_swap
+no_blur_fallback,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.07598784194528875,25.0,329.0,facenet,non_target_swap
+no_blur_fallback,accept_rate_upper_bound_all_attempts,21,,,micro,0.10512129380053908,39.0,371.0,facenet,non_target_swap
+no_blur_fallback,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_blur
+no_blur_fallback,accept_rate_successful_pairs,21,,,clip_macro,,,0,facenet,non_target_blur
+no_blur_fallback,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_blur
+no_blur_fallback,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_blur
+no_blur_fallback,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_blur
+no_blur_fallback,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_blur
+no_blur_fallback,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_blur
+no_blur_fallback,accept_rate_upper_bound_all_attempts,21,,,micro,,0.0,0.0,facenet,non_target_blur
+selective_blur_only,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.9738625363020329,1006.0,1033.0,adaface,target
+selective_blur_only,accept_rate_successful_pairs,21,,,clip_macro,0.9654718777392338,,20,adaface,target
+selective_blur_only,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.9153776160145587,1006.0,1099.0,adaface,target
+selective_blur_only,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9799809342230696,1028.0,1049.0,adaface,target
+selective_blur_only,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,adaface,target
+selective_blur_only,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9463148316651502,1040.0,1099.0,adaface,target
+selective_blur_only,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9841897233201581,996.0,1012.0,adaface,target
+selective_blur_only,accept_rate_upper_bound_all_attempts,21,,,micro,0.9754322111010009,1072.0,1099.0,adaface,target
+selective_blur_only,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.511605415860735,529.0,1034.0,adaface,non_target
+selective_blur_only,accept_rate_successful_pairs,21,,,clip_macro,0.5477002804202359,,21,adaface,non_target
+selective_blur_only,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.33417561591914086,529.0,1583.0,adaface,non_target
+selective_blur_only,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9120654396728016,1338.0,1467.0,adaface,non_target
+selective_blur_only,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,adaface,non_target
+selective_blur_only,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.655085281111813,1037.0,1583.0,adaface,non_target
+selective_blur_only,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.5397489539748954,516.0,956.0,adaface,non_target
+selective_blur_only,accept_rate_upper_bound_all_attempts,21,,,micro,0.6809854706253948,1078.0,1583.0,adaface,non_target
+selective_blur_only,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_swap
+selective_blur_only,accept_rate_successful_pairs,21,,,clip_macro,,,0,adaface,non_target_swap
+selective_blur_only,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_swap
+selective_blur_only,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_swap
+selective_blur_only,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_swap
+selective_blur_only,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_swap
+selective_blur_only,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,adaface,non_target_swap
+selective_blur_only,accept_rate_upper_bound_all_attempts,21,,,micro,,0.0,0.0,adaface,non_target_swap
+selective_blur_only,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.5097276264591439,524.0,1028.0,adaface,non_target_blur
+selective_blur_only,accept_rate_successful_pairs,21,,,clip_macro,0.5239937354153328,,20,adaface,non_target_blur
+selective_blur_only,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.3486360612109115,524.0,1503.0,adaface,non_target_blur
+selective_blur_only,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.912621359223301,1316.0,1442.0,adaface,non_target_blur
+selective_blur_only,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.978709248170326,1471.0,1503.0,adaface,non_target_blur
+selective_blur_only,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6852960745176314,1030.0,1503.0,adaface,non_target_blur
+selective_blur_only,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.5383806519453207,512.0,951.0,adaface,non_target_blur
+selective_blur_only,accept_rate_upper_bound_all_attempts,21,,,micro,0.6646706586826348,999.0,1503.0,adaface,non_target_blur
+selective_blur_only,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.972894482090997,1005.0,1033.0,facenet,target
+selective_blur_only,accept_rate_successful_pairs,21,,,clip_macro,0.9643935955563006,,20,facenet,target
+selective_blur_only,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.9144676979071884,1005.0,1099.0,facenet,target
+selective_blur_only,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9742612011439467,1022.0,1049.0,facenet,target
+selective_blur_only,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,facenet,target
+selective_blur_only,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9463148316651502,1040.0,1099.0,facenet,target
+selective_blur_only,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9910625620655412,998.0,1007.0,facenet,target
+selective_blur_only,accept_rate_upper_bound_all_attempts,21,,,micro,0.9745222929936306,1071.0,1099.0,facenet,target
+selective_blur_only,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.07736943907156674,80.0,1034.0,facenet,non_target
+selective_blur_only,accept_rate_successful_pairs,21,,,clip_macro,0.08858505955749188,,21,facenet,non_target
+selective_blur_only,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.05053695514845231,80.0,1583.0,facenet,non_target
+selective_blur_only,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9011588275391956,1322.0,1467.0,facenet,non_target
+selective_blur_only,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,facenet,non_target
+selective_blur_only,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.655085281111813,1037.0,1583.0,facenet,non_target
+selective_blur_only,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.08076514346439957,76.0,941.0,facenet,non_target
+selective_blur_only,accept_rate_upper_bound_all_attempts,21,,,micro,0.3973468098547063,629.0,1583.0,facenet,non_target
+selective_blur_only,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_swap
+selective_blur_only,accept_rate_successful_pairs,21,,,clip_macro,,,0,facenet,non_target_swap
+selective_blur_only,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_swap
+selective_blur_only,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_swap
+selective_blur_only,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_swap
+selective_blur_only,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_swap
+selective_blur_only,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,,0.0,0.0,facenet,non_target_swap
+selective_blur_only,accept_rate_upper_bound_all_attempts,21,,,micro,,0.0,0.0,facenet,non_target_swap
+selective_blur_only,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.07490272373540856,77.0,1028.0,facenet,non_target_blur
+selective_blur_only,accept_rate_successful_pairs,21,,,clip_macro,0.041586668148604615,,20,facenet,non_target_blur
+selective_blur_only,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.05123087159015303,77.0,1503.0,facenet,non_target_blur
+selective_blur_only,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9029126213592233,1302.0,1442.0,facenet,non_target_blur
+selective_blur_only,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.978709248170326,1471.0,1503.0,facenet,non_target_blur
+selective_blur_only,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6852960745176314,1030.0,1503.0,facenet,non_target_blur
+selective_blur_only,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.07905982905982906,74.0,936.0,facenet,non_target_blur
+selective_blur_only,accept_rate_upper_bound_all_attempts,21,,,micro,0.36726546906187624,552.0,1503.0,facenet,non_target_blur
+no_mouth_paste,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.9729468599033816,1007.0,1035.0,adaface,target
+no_mouth_paste,accept_rate_successful_pairs,21,,,clip_macro,0.9644076641750203,,20,adaface,target
+no_mouth_paste,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.916287534121929,1007.0,1099.0,adaface,target
+no_mouth_paste,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9799809342230696,1028.0,1049.0,adaface,target
+no_mouth_paste,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,adaface,target
+no_mouth_paste,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9481346678798908,1042.0,1099.0,adaface,target
+no_mouth_paste,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.983218163869694,996.0,1013.0,adaface,target
+no_mouth_paste,accept_rate_upper_bound_all_attempts,21,,,micro,0.9745222929936306,1071.0,1099.0,adaface,target
+no_mouth_paste,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.3397790055248619,369.0,1086.0,adaface,non_target
+no_mouth_paste,accept_rate_successful_pairs,21,,,clip_macro,0.3596709769677524,,21,adaface,non_target
+no_mouth_paste,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.23310170562223625,369.0,1583.0,adaface,non_target
+no_mouth_paste,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9120654396728016,1338.0,1467.0,adaface,non_target
+no_mouth_paste,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,adaface,non_target
+no_mouth_paste,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6974099810486418,1104.0,1583.0,adaface,non_target
+no_mouth_paste,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.3589232303090728,360.0,1003.0,adaface,non_target
+no_mouth_paste,accept_rate_upper_bound_all_attempts,21,,,micro,0.5470625394819962,866.0,1583.0,adaface,non_target
+no_mouth_paste,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.13445378151260504,48.0,357.0,adaface,non_target_swap
+no_mouth_paste,accept_rate_successful_pairs,21,,,clip_macro,0.07813852813852815,,14,adaface,non_target_swap
+no_mouth_paste,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.1293800539083558,48.0,371.0,adaface,non_target_swap
+no_mouth_paste,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9801136363636364,345.0,352.0,adaface,non_target_swap
+no_mouth_paste,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9649595687331537,358.0,371.0,adaface,non_target_swap
+no_mouth_paste,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9973045822102425,370.0,371.0,adaface,non_target_swap
+no_mouth_paste,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.13623188405797101,47.0,345.0,adaface,non_target_swap
+no_mouth_paste,accept_rate_upper_bound_all_attempts,21,,,micro,0.16711590296495957,62.0,371.0,adaface,non_target_swap
+no_mouth_paste,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.43949930458970793,316.0,719.0,adaface,non_target_blur
+no_mouth_paste,accept_rate_successful_pairs,21,,,clip_macro,0.5415015032127243,,18,adaface,non_target_blur
+no_mouth_paste,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.2791519434628975,316.0,1132.0,adaface,non_target_blur
+no_mouth_paste,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.8908256880733945,971.0,1090.0,adaface,non_target_blur
+no_mouth_paste,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9832155477031802,1113.0,1132.0,adaface,non_target_blur
+no_mouth_paste,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6369257950530035,721.0,1132.0,adaface,non_target_blur
+no_mouth_paste,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.47465437788018433,309.0,651.0,adaface,non_target_blur
+no_mouth_paste,accept_rate_upper_bound_all_attempts,21,,,micro,0.6439929328621908,729.0,1132.0,adaface,non_target_blur
+no_mouth_paste,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.9710144927536232,1005.0,1035.0,facenet,target
+no_mouth_paste,accept_rate_successful_pairs,21,,,clip_macro,0.9609484296111347,,20,facenet,target
+no_mouth_paste,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.9144676979071884,1005.0,1099.0,facenet,target
+no_mouth_paste,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9742612011439467,1022.0,1049.0,facenet,target
+no_mouth_paste,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,facenet,target
+no_mouth_paste,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9481346678798908,1042.0,1099.0,facenet,target
+no_mouth_paste,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9890981169474727,998.0,1009.0,facenet,target
+no_mouth_paste,accept_rate_upper_bound_all_attempts,21,,,micro,0.9727024567788899,1069.0,1099.0,facenet,target
+no_mouth_paste,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.07550644567219153,82.0,1086.0,facenet,non_target
+no_mouth_paste,accept_rate_successful_pairs,21,,,clip_macro,0.0959782196631513,,21,facenet,non_target
+no_mouth_paste,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.05180037902716361,82.0,1583.0,facenet,non_target
+no_mouth_paste,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9011588275391956,1322.0,1467.0,facenet,non_target
+no_mouth_paste,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,facenet,non_target
+no_mouth_paste,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6974099810486418,1104.0,1583.0,facenet,non_target
+no_mouth_paste,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.07918781725888324,78.0,985.0,facenet,non_target
+no_mouth_paste,accept_rate_upper_bound_all_attempts,21,,,micro,0.36576121288692354,579.0,1583.0,facenet,non_target
+no_mouth_paste,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.025210084033613446,9.0,357.0,facenet,non_target_swap
+no_mouth_paste,accept_rate_successful_pairs,21,,,clip_macro,0.019047619047619046,,14,facenet,non_target_swap
+no_mouth_paste,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.02425876010781671,9.0,371.0,facenet,non_target_swap
+no_mouth_paste,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9346590909090909,329.0,352.0,facenet,non_target_swap
+no_mouth_paste,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9649595687331537,358.0,371.0,facenet,non_target_swap
+no_mouth_paste,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9973045822102425,370.0,371.0,facenet,non_target_swap
+no_mouth_paste,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.02735562310030395,9.0,329.0,facenet,non_target_swap
+no_mouth_paste,accept_rate_upper_bound_all_attempts,21,,,micro,0.06199460916442048,23.0,371.0,facenet,non_target_swap
+no_mouth_paste,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.09735744089012517,70.0,719.0,facenet,non_target_blur
+no_mouth_paste,accept_rate_successful_pairs,21,,,clip_macro,0.0451383559115092,,18,facenet,non_target_blur
+no_mouth_paste,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.061837455830388695,70.0,1132.0,facenet,non_target_blur
+no_mouth_paste,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.8926605504587156,973.0,1090.0,facenet,non_target_blur
+no_mouth_paste,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9832155477031802,1113.0,1132.0,facenet,non_target_blur
+no_mouth_paste,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6369257950530035,721.0,1132.0,facenet,non_target_blur
+no_mouth_paste,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.10323574730354391,67.0,649.0,facenet,non_target_blur
+no_mouth_paste,accept_rate_upper_bound_all_attempts,21,,,micro,0.42667844522968196,483.0,1132.0,facenet,non_target_blur
+no_swap_cache,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.9738878143133463,1007.0,1034.0,adaface,target
+no_swap_cache,accept_rate_successful_pairs,21,,,clip_macro,0.9657965530639092,,20,adaface,target
+no_swap_cache,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.916287534121929,1007.0,1099.0,adaface,target
+no_swap_cache,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9799809342230696,1028.0,1049.0,adaface,target
+no_swap_cache,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,adaface,target
+no_swap_cache,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9472247497725205,1041.0,1099.0,adaface,target
+no_swap_cache,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9841897233201581,996.0,1012.0,adaface,target
+no_swap_cache,accept_rate_upper_bound_all_attempts,21,,,micro,0.9754322111010009,1072.0,1099.0,adaface,target
+no_swap_cache,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.41347053320860616,442.0,1069.0,adaface,non_target
+no_swap_cache,accept_rate_successful_pairs,21,,,clip_macro,0.4301317990001283,,21,adaface,non_target
+no_swap_cache,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.279216677195199,442.0,1583.0,adaface,non_target
+no_swap_cache,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9120654396728016,1338.0,1467.0,adaface,non_target
+no_swap_cache,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,adaface,non_target
+no_swap_cache,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6835123183828175,1082.0,1583.0,adaface,non_target
+no_swap_cache,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.4376899696048632,432.0,987.0,adaface,non_target
+no_swap_cache,accept_rate_upper_bound_all_attempts,21,,,micro,0.6039166140240051,956.0,1583.0,adaface,non_target
+no_swap_cache,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.3412969283276451,100.0,293.0,adaface,non_target_swap
+no_swap_cache,accept_rate_successful_pairs,21,,,clip_macro,0.22515015860502657,,14,adaface,non_target_swap
+no_swap_cache,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.32894736842105265,100.0,304.0,adaface,non_target_swap
+no_swap_cache,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9756944444444444,281.0,288.0,adaface,non_target_swap
+no_swap_cache,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9638157894736842,293.0,304.0,adaface,non_target_swap
+no_swap_cache,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9967105263157895,303.0,304.0,adaface,non_target_swap
+no_swap_cache,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.3487544483985765,98.0,281.0,adaface,non_target_swap
+no_swap_cache,accept_rate_upper_bound_all_attempts,21,,,micro,0.3651315789473684,111.0,304.0,adaface,non_target_swap
+no_swap_cache,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.4386422976501306,336.0,766.0,adaface,non_target_blur
+no_swap_cache,accept_rate_successful_pairs,21,,,clip_macro,0.4643315737743772,,19,adaface,non_target_blur
+no_swap_cache,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.28023352793994993,336.0,1199.0,adaface,non_target_blur
+no_swap_cache,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.8968804159445407,1035.0,1154.0,adaface,non_target_blur
+no_swap_cache,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9824854045037531,1178.0,1199.0,adaface,non_target_blur
+no_swap_cache,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.640533778148457,768.0,1199.0,adaface,non_target_blur
+no_swap_cache,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.47067238912732473,329.0,699.0,adaface,non_target_blur
+no_swap_cache,accept_rate_upper_bound_all_attempts,21,,,micro,0.6413678065054211,769.0,1199.0,adaface,non_target_blur
+no_swap_cache,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.971953578336557,1005.0,1034.0,facenet,target
+no_swap_cache,accept_rate_successful_pairs,21,,,clip_macro,0.9623373185000237,,20,facenet,target
+no_swap_cache,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.9144676979071884,1005.0,1099.0,facenet,target
+no_swap_cache,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9742612011439467,1022.0,1049.0,facenet,target
+no_swap_cache,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9608735213830755,1056.0,1099.0,facenet,target
+no_swap_cache,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9472247497725205,1041.0,1099.0,facenet,target
+no_swap_cache,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9900793650793651,998.0,1008.0,facenet,target
+no_swap_cache,accept_rate_upper_bound_all_attempts,21,,,micro,0.9736123748862603,1070.0,1099.0,facenet,target
+no_swap_cache,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.09260991580916744,99.0,1069.0,facenet,non_target
+no_swap_cache,accept_rate_successful_pairs,21,,,clip_macro,0.11928244595832904,,21,facenet,non_target
+no_swap_cache,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.06253948199620973,99.0,1583.0,facenet,non_target
+no_swap_cache,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9011588275391956,1322.0,1467.0,facenet,non_target
+no_swap_cache,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9469361970941251,1499.0,1583.0,facenet,non_target
+no_swap_cache,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.6835123183828175,1082.0,1583.0,facenet,non_target
+no_swap_cache,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.09803921568627451,95.0,969.0,facenet,non_target
+no_swap_cache,accept_rate_upper_bound_all_attempts,21,,,micro,0.3872394188250158,613.0,1583.0,facenet,non_target
+no_swap_cache,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.06484641638225255,19.0,293.0,facenet,non_target_swap
+no_swap_cache,accept_rate_successful_pairs,21,,,clip_macro,0.04892308125457515,,14,facenet,non_target_swap
+no_swap_cache,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.0625,19.0,304.0,facenet,non_target_swap
+no_swap_cache,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.9201388888888888,265.0,288.0,facenet,non_target_swap
+no_swap_cache,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9638157894736842,293.0,304.0,facenet,non_target_swap
+no_swap_cache,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9967105263157895,303.0,304.0,facenet,non_target_swap
+no_swap_cache,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.07169811320754717,19.0,265.0,facenet,non_target_swap
+no_swap_cache,accept_rate_upper_bound_all_attempts,21,,,micro,0.09868421052631579,30.0,304.0,facenet,non_target_swap
+no_swap_cache,accept_rate_successful_pairs,21,,unverified_projection; calibrated real verifier,micro,0.09921671018276762,76.0,766.0,facenet,non_target_blur
+no_swap_cache,accept_rate_successful_pairs,21,,,clip_macro,0.09652624254494006,,19,facenet,non_target_blur
+no_swap_cache,accept_rate_lower_bound_all_attempts,21,,unverified_projection; calibrated real verifier,micro,0.0633861551292744,76.0,1199.0,facenet,non_target_blur
+no_swap_cache,original_baseline_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.8986135181975736,1037.0,1154.0,facenet,non_target_blur
+no_swap_cache,source_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.9824854045037531,1178.0,1199.0,facenet,non_target_blur
+no_swap_cache,output_extraction_success_rate,21,,unverified_projection; calibrated real verifier,micro,0.640533778148457,768.0,1199.0,facenet,non_target_blur
+no_swap_cache,original_verified_subset_accept_rate,21,,unverified_projection; calibrated real verifier,micro,0.10473457675753228,73.0,697.0,facenet,non_target_blur
+no_swap_cache,accept_rate_upper_bound_all_attempts,21,,,micro,0.4245204336947456,509.0,1199.0,facenet,non_target_blur
+full,any_frame_accepted,20,,,person_clip,1.0,20,20,adaface,target
+full,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,adaface,target
+full,mean_embedding_attack_accepted,20,,,person_clip,1.0,20,20,adaface,target
+full,any_frame_accepted,21,,,person_clip,0.8,24,30,adaface,non_target
+full,any_frame_risk_upper_bound,21,,,person_clip,0.9696969696969697,32,33,adaface,non_target
+full,mean_embedding_attack_accepted,21,,,person_clip,0.5333333333333333,16,30,adaface,non_target
+full,any_frame_accepted,20,,,person_clip,1.0,20,20,facenet,target
+full,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,facenet,target
+full,mean_embedding_attack_accepted,20,,,person_clip,1.0,20,20,facenet,target
+full,any_frame_accepted,21,,,person_clip,0.36666666666666664,11,30,facenet,non_target
+full,any_frame_risk_upper_bound,21,,,person_clip,0.8484848484848485,28,33,facenet,non_target
+full,mean_embedding_attack_accepted,21,,,person_clip,0.13333333333333333,4,30,facenet,non_target
+no_identity_lock,any_frame_accepted,20,,,person_clip,1.0,20,20,adaface,target
+no_identity_lock,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,adaface,target
+no_identity_lock,mean_embedding_attack_accepted,20,,,person_clip,0.95,19,20,adaface,target
+no_identity_lock,any_frame_accepted,21,,,person_clip,0.7931034482758621,23,29,adaface,non_target
+no_identity_lock,any_frame_risk_upper_bound,21,,,person_clip,0.9696969696969697,32,33,adaface,non_target
+no_identity_lock,mean_embedding_attack_accepted,21,,,person_clip,0.5172413793103449,15,29,adaface,non_target
+no_identity_lock,any_frame_accepted,20,,,person_clip,1.0,20,20,facenet,target
+no_identity_lock,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,facenet,target
+no_identity_lock,mean_embedding_attack_accepted,20,,,person_clip,0.95,19,20,facenet,target
+no_identity_lock,any_frame_accepted,21,,,person_clip,0.3448275862068966,10,29,facenet,non_target
+no_identity_lock,any_frame_risk_upper_bound,21,,,person_clip,0.8484848484848485,28,33,facenet,non_target
+no_identity_lock,mean_embedding_attack_accepted,21,,,person_clip,0.10344827586206896,3,29,facenet,non_target
+no_blur_fallback,any_frame_accepted,20,,,person_clip,1.0,20,20,adaface,target
+no_blur_fallback,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,adaface,target
+no_blur_fallback,mean_embedding_attack_accepted,20,,,person_clip,1.0,20,20,adaface,target
+no_blur_fallback,any_frame_accepted,21,,,person_clip,0.967741935483871,30,31,adaface,non_target
+no_blur_fallback,any_frame_risk_upper_bound,21,,,person_clip,0.9696969696969697,32,33,adaface,non_target
+no_blur_fallback,mean_embedding_attack_accepted,21,,,person_clip,0.9354838709677419,29,31,adaface,non_target
+no_blur_fallback,any_frame_accepted,20,,,person_clip,1.0,20,20,facenet,target
+no_blur_fallback,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,facenet,target
+no_blur_fallback,mean_embedding_attack_accepted,20,,,person_clip,1.0,20,20,facenet,target
+no_blur_fallback,any_frame_accepted,21,,,person_clip,0.967741935483871,30,31,facenet,non_target
+no_blur_fallback,any_frame_risk_upper_bound,21,,,person_clip,0.9696969696969697,32,33,facenet,non_target
+no_blur_fallback,mean_embedding_attack_accepted,21,,,person_clip,0.8064516129032258,25,31,facenet,non_target
+selective_blur_only,any_frame_accepted,20,,,person_clip,1.0,20,20,adaface,target
+selective_blur_only,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,adaface,target
+selective_blur_only,mean_embedding_attack_accepted,20,,,person_clip,1.0,20,20,adaface,target
+selective_blur_only,any_frame_accepted,21,,,person_clip,0.8333333333333334,25,30,adaface,non_target
+selective_blur_only,any_frame_risk_upper_bound,21,,,person_clip,1.0,33,33,adaface,non_target
+selective_blur_only,mean_embedding_attack_accepted,21,,,person_clip,0.7333333333333333,22,30,adaface,non_target
+selective_blur_only,any_frame_accepted,20,,,person_clip,1.0,20,20,facenet,target
+selective_blur_only,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,facenet,target
+selective_blur_only,mean_embedding_attack_accepted,20,,,person_clip,1.0,20,20,facenet,target
+selective_blur_only,any_frame_accepted,21,,,person_clip,0.3,9,30,facenet,non_target
+selective_blur_only,any_frame_risk_upper_bound,21,,,person_clip,0.8484848484848485,28,33,facenet,non_target
+selective_blur_only,mean_embedding_attack_accepted,21,,,person_clip,0.1,3,30,facenet,non_target
+no_mouth_paste,any_frame_accepted,20,,,person_clip,1.0,20,20,adaface,target
+no_mouth_paste,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,adaface,target
+no_mouth_paste,mean_embedding_attack_accepted,20,,,person_clip,1.0,20,20,adaface,target
+no_mouth_paste,any_frame_accepted,21,,,person_clip,0.8,24,30,adaface,non_target
+no_mouth_paste,any_frame_risk_upper_bound,21,,,person_clip,0.9696969696969697,32,33,adaface,non_target
+no_mouth_paste,mean_embedding_attack_accepted,21,,,person_clip,0.4666666666666667,14,30,adaface,non_target
+no_mouth_paste,any_frame_accepted,20,,,person_clip,1.0,20,20,facenet,target
+no_mouth_paste,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,facenet,target
+no_mouth_paste,mean_embedding_attack_accepted,20,,,person_clip,1.0,20,20,facenet,target
+no_mouth_paste,any_frame_accepted,21,,,person_clip,0.3,9,30,facenet,non_target
+no_mouth_paste,any_frame_risk_upper_bound,21,,,person_clip,0.7878787878787878,26,33,facenet,non_target
+no_mouth_paste,mean_embedding_attack_accepted,21,,,person_clip,0.1,3,30,facenet,non_target
+no_swap_cache,any_frame_accepted,20,,,person_clip,1.0,20,20,adaface,target
+no_swap_cache,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,adaface,target
+no_swap_cache,mean_embedding_attack_accepted,20,,,person_clip,1.0,20,20,adaface,target
+no_swap_cache,any_frame_accepted,21,,,person_clip,0.8333333333333334,25,30,adaface,non_target
+no_swap_cache,any_frame_risk_upper_bound,21,,,person_clip,1.0,33,33,adaface,non_target
+no_swap_cache,mean_embedding_attack_accepted,21,,,person_clip,0.5666666666666667,17,30,adaface,non_target
+no_swap_cache,any_frame_accepted,20,,,person_clip,1.0,20,20,facenet,target
+no_swap_cache,any_frame_risk_upper_bound,21,,,person_clip,1.0,21,21,facenet,target
+no_swap_cache,mean_embedding_attack_accepted,20,,,person_clip,1.0,20,20,facenet,target
+no_swap_cache,any_frame_accepted,21,,,person_clip,0.36666666666666664,11,30,facenet,non_target
+no_swap_cache,any_frame_risk_upper_bound,21,,,person_clip,0.8484848484848485,28,33,facenet,non_target
+no_swap_cache,mean_embedding_attack_accepted,21,,,person_clip,0.13333333333333333,4,30,facenet,non_target

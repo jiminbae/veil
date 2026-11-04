@@ -1,0 +1,7 @@
+condition,clip_id,sequence,annotation_level,target_roi_observations,pixel_channels,processed_mae_0_255,control_mae_0_255,excess_mae_0_255,frame_stride,interpretation
+full,chokepoint_P2E_S5_C2,P2E_S5,unverified_projection,25,268671,8.944772602923278,2.4985577155703442,6.446214887352934,5,target pixel change; not face-swap perceptual quality
+no_identity_lock,chokepoint_P2E_S5_C2,P2E_S5,unverified_projection,25,268671,10.594593387451567,2.4985577155703442,8.096035671881223,5,target pixel change; not face-swap perceptual quality
+no_blur_fallback,chokepoint_P2E_S5_C2,P2E_S5,unverified_projection,25,268671,2.4985577155703442,2.4985577155703442,0.0,5,target pixel change; not face-swap perceptual quality
+selective_blur_only,chokepoint_P2E_S5_C2,P2E_S5,unverified_projection,25,268671,8.944772602923278,2.4985577155703442,6.446214887352934,5,target pixel change; not face-swap perceptual quality
+no_mouth_paste,chokepoint_P2E_S5_C2,P2E_S5,unverified_projection,25,268671,8.944772602923278,2.4985577155703442,6.446214887352934,5,target pixel change; not face-swap perceptual quality
+no_swap_cache,chokepoint_P2E_S5_C2,P2E_S5,unverified_projection,25,268671,8.944772602923278,2.4985577155703442,6.446214887352934,5,target pixel change; not face-swap perceptual quality
