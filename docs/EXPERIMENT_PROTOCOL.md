@@ -180,3 +180,9 @@ separate for implementation, execution and validation.
   report overlap, rather than silently truncating/replacing them. An original-PTS
   comparison at 135 s confirmed the ceil(start*fps) first-frame mapping for one
   clip. This is a spot check, not full human validation of every projection.
+- Execution amendment: P2L_S5_C2's frozen reference cannot be registered by
+  ArcFace. All six attempts fail before video decoding; keep them in the secondary
+  ledger with unavailable rates. Do not select an easier person/reference after
+  this finding. Orchestration now permits the optional partial secondary result
+  while completing primary analysis. No renderer, input, model or threshold is
+  changed. Available-output secondary metrics cover P2E_S5_C2 only.

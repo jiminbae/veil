@@ -46,6 +46,9 @@ below. Execution and annotation validation have separate completion states.
    day-cluster sensitivity do not turn these into a large independent sample.
    The ChokePoint supplement contains only two distinct crowded recordings;
    duplicating camera views to obtain ten clips would overstate generalization.
+   The frozen P2L reference fails ArcFace registration in all six conditions, so
+   only P2E has valid output. All twelve attempts remain reported. A verified
+   same-person reference requires human review; no easier target was substituted.
 8. **Target-priority overlap policy.** Restoring registered target boxes prevents
    another operation from changing those pixels but may preserve overlapping
    non-target pixels. A `SWAP` or `BLUR` action means some pixels changed, not

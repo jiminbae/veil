@@ -63,13 +63,41 @@ def main():
         write_json(status_path,status);print(name,'completed',round(stage['elapsed_sec'],1),'sec',flush=True)
     supplement=run/'supplement'
     if (supplement/'inputs/dataset_manifest.jsonl').exists():
-        execute('supplement_processing','tools.run_veil_benchmark',[
-            '--manifest',supplement/'inputs/dataset_manifest.jsonl','--output-dir',supplement/'benchmark',
-            '--replacement-image',ROOT/'media/fake_face.jpg','--conditions','full','no_identity_lock',
-            'no_blur_fallback','selective_blur_only','no_mouth_paste','no_swap_cache',
-            '--python',sys.executable,'--timeout-sec','900','--skip-existing'],[supplement/'benchmark/benchmark_summary.json'])
+        saved=supplement/'benchmark/benchmark_summary.json'
+        if saved.exists():
+            check=json.loads(saved.read_text())
+            attempts=json.loads((supplement/'benchmark/run_summary.json').read_text())
+            if check['total_runs']!=12 or len(attempts)!=12:
+                raise RuntimeError('Secondary attempt ledger is incomplete; preserve and inspect it')
+            secondary_rows={r['clip_id']:r for r in (json.loads(s) for s in (supplement/'inputs/dataset_manifest.jsonl').read_text().splitlines())}
+            model_candidates=list((ROOT/'models/veil/weights').glob('*'))+list((Path.home()/'.insightface/models/buffalo_l').glob('*.onnx'))
+            model_hashes={p.name:sha256(p) for p in model_candidates if p.is_file()}
+            for attempt in attempts:
+                if attempt['status'] not in {'completed','skipped_existing'}:continue
+                directory=Path(attempt['face_metadata']).parent
+                receipt=json.loads((directory/'run_receipt.json').read_text())
+                fp=receipt['fingerprint'];row=secondary_rows[attempt['clip_id']]
+                if fp['clip']!=sha256(ROOT/row['clip_path']) or fp['protected_reference']!=sha256(ROOT/row['target_image_path']) or fp['replacement']!=sha256(ROOT/'media/fake_face.jpg'):
+                    raise RuntimeError('Secondary input fingerprint mismatch')
+                if fp['models']!=model_hashes or any(sha256(ROOT/path)!=digest for path,digest in fp['code'].items()):
+                    raise RuntimeError('Secondary model/processing-code fingerprint mismatch')
+                if not all((directory/name).exists() and sha256(directory/name)==digest for name,digest in receipt['outputs'].items()):
+                    raise RuntimeError('Secondary completed output hash mismatch')
+            previous=status['stages'].get('supplement_processing',{})
+            status['stages']['supplement_processing']={**previous,
+                'status':'completed_with_failed_inputs' if check['failed_runs'] else 'completed',
+                'completed_runs':check['completed_runs'],'failed_runs':check['failed_runs'],
+                'adoption_note':'Preserved original attempts. Failed target registration is a system/input failure, not a reason to discard the clip or block primary analysis.',
+                'outputs':{str(saved):sha256(saved)}}
+            write_json(status_path,status)
+        else:
+            execute('supplement_processing','tools.run_veil_benchmark',[
+                '--manifest',supplement/'inputs/dataset_manifest.jsonl','--output-dir',supplement/'benchmark',
+                '--replacement-image',ROOT/'media/fake_face.jpg','--conditions','full','no_identity_lock',
+                'no_blur_fallback','selective_blur_only','no_mouth_paste','no_swap_cache',
+                '--python',sys.executable,'--timeout-sec','900','--skip-existing'],[saved])
         check=json.loads((supplement/'benchmark/benchmark_summary.json').read_text())
-        if check['completed_runs']!=12:raise RuntimeError('Secondary processing incomplete; inspect its preserved run ledger')
+        print('Secondary processing:',check['completed_runs'],'completed,',check['failed_runs'],'failed; all attempts retained',flush=True)
     for label,base,benchmark,dest in [('primary',run,run/'primary',paper),
         ('supplement',supplement,supplement/'benchmark',paper/'chokepoint_supplement')]:
         if not (base/'inputs/dataset_manifest.jsonl').exists():continue

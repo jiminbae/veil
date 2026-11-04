@@ -98,9 +98,14 @@ def evaluate_matrix(manifest,annotations,benchmark,output,local_output):
         statuses.append({'condition':condition,'clip_id':clip_id,'status':run['status'],
             'returncode':run['returncode'],'elapsed_sec':run['elapsed_sec']})
         if run['status'] not in {'completed','skipped_existing'}:
-            failures.append({'condition':condition,'clip_id':clip_id,'failure_type':'run_'+run['status'],'count':1})
+            error_path=run.get('stderr')
+            error_text=Path(error_path).read_text(errors='replace') if error_path and Path(error_path).is_file() else ''
+            reason='target_registration_no_valid_embedding' if 'No valid target embeddings loaded' in error_text else 'processing_failure_see_private_log'
+            statuses[-1]['failure_reason']=reason
+            failures.append({'condition':condition,'clip_id':clip_id,'failure_type':'run_'+run['status'],'failure_reason':reason,'count':1})
             clips.append({'condition':condition,'clip_id':clip_id,'sequence':source['sequence'],
                 'status':run['status'],'expected_frames':source.get('frame_count'),'evaluated_frames':0,
+                'failure_reason':reason,
                 'derived_target_preserve_rate':None,'derived_nontarget_exposure_rate':None})
             continue
         run_dir=Path(run['face_metadata']).parent
@@ -213,7 +218,7 @@ def evaluate_matrix(manifest,annotations,benchmark,output,local_output):
         ('per_identity_metrics.csv',identities),('runtime_metrics.csv',runtimes),('failure_cases.csv',failures)]:
         csv_write(Path(output)/name,data)
     write_json(Path(output)/'integrity_checks.json',{'checks':integrity,
-        'all_run_checks_pass':all(all(v for k,v in check.items() if isinstance(v,bool)) for check in integrity),
+        'all_run_checks_pass':all(all(v for k,v in check.items() if isinstance(v,bool)) for check in integrity) if integrity else None,
         'completed_runs':len(integrity),'planned_population':len(population),
         'unique_condition_clip_keys':len({(r['condition'],r['clip_id']) for r in statuses})==len(statuses),
         'human_annotation_validation':False,'identity_verifier_validation':'separate scoring stage'})

@@ -198,7 +198,8 @@ def main():
         (dest/'dataset_manifest.jsonl').write_text(''.join(json.dumps(r,sort_keys=True)+'\n' for r in manifest_public(secondary)))
         extra,_=validate_raw(base,dest,base/'benchmark',secondary);issues.extend(extra)
         write_json(dest/'benchmark_summary.json',redact(json.loads((base/'benchmark/benchmark_summary.json').read_text())))
-        (dest/'README.md').write_text('# ChokePoint supplement\n\nTwo distinct crowded recordings, one camera per recording, 300 frames each, six conditions (12 runs). Inputs are NICTA research derivatives; retain attribution and license notices. Labels are independent MTCNN/geometry-track pseudo-labels with fragmented IDs, not official or human GT. The verifier shares MTCNN detection with this label source. Treat target/identity and person-clip metrics as exploratory. Do not merge with Panoptic or infer 10–20 independent scenes.\n\nPer-clip action/runtime/utility and two-model verification summaries are in this directory. Groundtruth crowded-sequence labels were absent from the official supplied archive. Human identity review is pending.\n')
+        secondary_summary=json.loads((base/'benchmark/benchmark_summary.json').read_text())
+        (dest/'README.md').write_text('# ChokePoint supplement\n\nTwo distinct crowded recordings were attempted, one camera per recording, 300 frames each, six conditions (12 attempted runs). '+str(secondary_summary['completed_runs'])+' completed and '+str(secondary_summary['failed_runs'])+' failed. P2L_S5_C2 could not enroll the frozen target reference in ArcFace, before any rendered frames; all six failures remain in run_status and per_clip_metrics with unavailable rates. No easier target was substituted. Valid-output metrics cover P2E_S5_C2 only, not two successful scenes.\n\nInputs are NICTA research derivatives; retain attribution and license notices. Labels are independent MTCNN/geometry-track pseudo-labels with fragmented IDs, not official or human GT. The verifier shares MTCNN detection with this label source. Treat target/identity and person-clip metrics as exploratory. Do not merge with Panoptic or infer 10–20 independent scenes.\n\nGroundtruth crowded-sequence labels were absent from the official supplied archive. Human identity review and a verified same-person registration reference remain pending.\n')
     if (run/'stress/stress_manifest.jsonl').exists():
         stress=[json.loads(s) for s in (run/'stress/stress_manifest.jsonl').read_text().splitlines()]
         (paper/'historical_stress_manifest.jsonl').write_text(''.join(json.dumps(r,sort_keys=True)+'\n' for r in stress))
@@ -241,13 +242,13 @@ def main():
         if (run/src).exists():
             (paper/name).write_text(redact((run/src).read_text()))
     figures=json.loads((paper/'figures/figure_status.json').read_text())
-    completion={'overall_status':'executed_and_numerically_validated_with_pending_human_annotation_review' if not issues else 'needs_revision',
+    completion={'overall_status':'primary_executed_and_numerically_validated; secondary_partial; human_annotation_review_pending' if not issues else 'needs_revision',
         'implementation':{'status':'tested','processing_commit':processing['processing_code_commit'],'evaluation_commit':evaluation['evaluation_code_commit']},
         'primary_processing':{'expected_runs':126,'completed_runs':summary['completed_runs'],'clips':21,'conditions':6,'status':'completed' if summary['completed_runs']==126 else 'incomplete'},
         'independent_verification':{'status':'actual_adaface_and_facenet_completed','calibration':'separate LFW empirical 1% FMR; uncertainty/dependence disclosed','stride':5},
         'numerical_result_validation':{'status':'passed' if not issues else 'failed','issues':issues},
         'human_gt_validation':{'status':'pending','reason':'No human-reviewed correction file was supplied; all projections and geometry tracks remain unverified','action':'Use annotation_review.html and export corrections with actual reviewer identity'},
-        'figures':figures,'secondary_generalization':{'recordings':2,'runs':12,'annotation_level':'MTCNN geometry-track pseudo-label'},
+        'figures':figures,'secondary_generalization':{'attempted_recordings':2,'recordings_with_valid_output':1,'attempted_runs':12,'completed_runs':6,'failed_runs':6,'status':'partial_target_reference_registration_failure','annotation_level':'MTCNN geometry-track pseudo-label'},
         'historical_stress_processing':{'status':'pending','reason':'Nine rejected intervals recoverable, but original protected identities/rejected references absent; local review inputs preserved'},
         'not_generated':{'human_MOS':'No human raters','human_interrater_agreement':'No human raters',
             'pose_expression_accuracy':'No validated independent pose/expression reference',

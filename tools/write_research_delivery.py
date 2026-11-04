@@ -45,6 +45,15 @@ def main():
         historical[condition]=actual
     write_json(paper/'historical_recalculation.json',historical)
     condition_manifest=json.loads((paper/'condition_manifest.json').read_text())
+    path=paper/'dataset_manifest.jsonl'
+    public_manifest=[json.loads(s) for s in path.read_text().splitlines()]
+    for row in public_manifest:
+        if 'target_manually_replaced' in row:
+            row['historical_target_manually_replaced']=row.pop('target_manually_replaced')
+        if row.get('reinstated') and 'target_face_index' in row:
+            row['historical_neighbor_seed_face_index']=row.pop('target_face_index')
+            row['reference_index_note']='Seed index belongs to the neighboring historical frame; selected_reference_bbox is the actual independently detected new reference'
+    path.write_text(''.join(json.dumps(r,sort_keys=True)+'\n' for r in public_manifest))
     condition_manifest['implementation_map']={
         'full':{'functions':['prepare_track','FaceSwapper.swap_many_into_frame','paste_cached_swap','finalize_track']},
         'no_identity_lock':{'config':'IDENTITY_LOCK_ENABLED=False','function':'prepare_track; skip temporal lock branch','retained':['get_track_embedding cache','BoT-SORT','stable-ID association']},
@@ -74,7 +83,7 @@ def main():
                 branch_elapsed_note='Includes the interrupted/idle interval between user turns; not GPU compute time')
     write_json(paper/'timing_summary.json',timing)
     lines=['# VEIL 실행 결과 안내', '',
-        '주 평가 21개 클립 ×6조건(126회), 별도 ChokePoint 2개 촬영 ×6조건(12회)을 실제 처리했습니다. '
+        '주 평가 21개 클립 ×6조건(126회)을 완료했습니다. 별도 ChokePoint 2개 촬영 ×6조건은 12회 시도하여 6회 완료·6회 등록 실패했고, 실패를 분모에 남겼습니다. '
         '독립 AdaFace·FaceNet 평가, 같은 코덱 대조군, 집계·paired 비교·cluster bootstrap 및 PNG/SVG 그래프를 생성했습니다. '
         '**수치 무결성 검증과 사람 주석 검증은 별개입니다. 사람 검증은 대기 상태이며 결과는 탐색적입니다.**', '',
         '처리 코드: `'+job['processing_code_commit']+'`. 평가 코드는 provenance에 따로 기록했습니다. '
